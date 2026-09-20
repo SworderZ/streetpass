@@ -35,8 +35,10 @@ adb logcat -s DiscoveryService BleScanner BleAdvertiser
 
 - Никакого GPS, `ACCESS_COARSE_LOCATION`, Geofencing, Location API. На Android 12+
   `BLUETOOTH_SCAN` объявлен с `neverForLocation` — этот флаг не снимать.
-- Не добавлять разрешение `INTERNET`. Сетевых библиотек (Retrofit, OkHttp, Ktor)
-  в проекте быть не должно.
+- Разрешение `INTERNET` есть ради одного: проверки обновлений в
+  `data/update/UpdateRepository` через GitHub Releases API, только по нажатию
+  пользователя. Никакого другого сетевого кода, аналитики, телеметрии. Сетевых
+  библиотек (Retrofit, OkHttp, Ktor) не подключать — `HttpURLConnection` достаточно.
 - Не добавлять `BLUETOOTH_CONNECT`: оно нужно только для системного диалога
   включения Bluetooth, вместо которого открываются настройки.
 - Не хранить и не логировать MAC-адреса, имена устройств, координаты.

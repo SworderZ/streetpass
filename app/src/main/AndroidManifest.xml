@@ -33,6 +33,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- Только для проверки обновлений по кнопке (GitHub Releases) и установки
+         скачанного APK. Другого сетевого кода в приложении нет. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <application
         android:name=".StreetPassApp"
         android:allowBackup="false"

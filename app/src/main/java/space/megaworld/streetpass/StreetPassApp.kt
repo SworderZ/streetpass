@@ -12,6 +12,7 @@ import space.megaworld.streetpass.data.appDataStore
 import space.megaworld.streetpass.data.db.AppDatabase
 import space.megaworld.streetpass.data.identity.IdentityRepository
 import space.megaworld.streetpass.data.settings.SettingsRepository
+import space.megaworld.streetpass.data.update.UpdateRepository
 
 class StreetPassApp : Application() {
 
@@ -37,6 +38,13 @@ class AppContainer(context: Context) {
     val identityRepository = IdentityRepository(context.appDataStore)
 
     val encounterRepository = EncounterRepository(database)
+
+    val updateRepository = UpdateRepository(
+        context = context.applicationContext,
+        repo = BuildConfig.GITHUB_REPO,
+        currentVersion = BuildConfig.VERSION_NAME,
+        scope = applicationScope,
+    )
 
     /** Состояние сервиса обнаружения; UI читает его напрямую, без bind к сервису. */
     val discoveryState = MutableStateFlow(DiscoveryState())

@@ -22,7 +22,10 @@ Android-приложение, которое в фоне обнаруживае�
   это требование старой системы для BLE-сканирования, объяснить это в UI.
 - Персональные данные не собираются. Идентификатор — случайные байты, не
   связанные с аккаунтом, IMEI, MAC или номером телефона.
-- Данные не покидают устройство. Разрешения `INTERNET` в манифесте нет.
+- Данные не покидают устройство. Разрешение `INTERNET` используется только для
+  проверки обновлений: по нажатию кнопки один GET к GitHub Releases API и, по
+  желанию пользователя, скачивание APK. Ничего о встречах, ID или устройстве в
+  запросе нет. Других сетевых обращений в приложении быть не должно.
 - `android:allowBackup="false"` — база не уезжает в облачный бэкап.
 - MAC-адреса и имена устройств не сохраняются и не логируются.
 
@@ -231,6 +234,19 @@ Foreground-сервис с типом `connectedDevice`. Причина: нач�
 - Порог RSSI: слайдер −100…−40 dBm с пояснением дистанции.
 - Приватность: текст о том, что собирается и что нет; тумблер «хранить RSSI»;
   смена ID (с подтверждением); очистка истории (с подтверждением).
+- Обновления: текущая версия, кнопка «Проверить обновления». Запрос к
+  `api.github.com/repos/<owner>/<repo>/releases/latest`, сравнение `tag_name`
+  с `BuildConfig.VERSION_NAME`. Если есть новее — заметки к релизу, кнопки
+  «Скачать и установить» (DownloadManager → системный установщик, требует
+  `REQUEST_INSTALL_PACKAGES`) и «Открыть на GitHub». Ошибки сети показывать
+  текстом, не падать.
+
+### 9.1 Релизы
+
+GitHub Actions по тегу `v*` прогоняет `lint test`, собирает `assembleRelease`
+с ключом из секретов репозитория (`versionName` из тега, `versionCode` из номера
+запуска) и прикладывает APK к релизу. Обновление ставится поверх только при
+совпадении подписи: на телефоны ставить release-сборки, не debug.
 
 ## 10. Структура проекта
 
@@ -240,6 +256,7 @@ data/db/       Entities, Daos, AppDatabase
 data/settings/ SettingsRepository, AppSettings, PowerMode
 data/identity/ IdentityRepository
 data/          AppDataStore, EncounterRepository (антидубль)
+data/update/   UpdateRepository (GitHub Releases, DownloadManager)
 ble/           BleAdvertiser, BleScanner, DiscoveryService, BootReceiver
 ui/            AppRoot, AppViewModels, Permissions
 ui/theme/      Theme
