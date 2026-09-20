@@ -12,11 +12,13 @@ import android.util.Log
 import androidx.core.content.getSystemService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import space.megaworld.streetpass.R
 import space.megaworld.streetpass.core.BleConstants
 
 /**
- * Неподключаемая legacy-реклама с 8 байтами ID в Service Data. GATT-сервер не поднимается,
- * подключиться к устройству нельзя — наружу уходят только случайные байты.
+ * Неподключаемая legacy-реклама: 8 байт ID в Service Data основного пакета и,
+ * если задан, ник в scan-response. GATT-сервер не поднимается, подключиться
+ * к устройству нельзя.
  */
 class BleAdvertiser(private val context: Context) {
 
@@ -36,17 +38,17 @@ class BleAdvertiser(private val context: Context) {
     // Разрешения проверяет вызывающая сторона до запуска сервиса; отзыв в рантайме
     // ловится через SecurityException, поэтому статическая проверка lint здесь избыточна.
     @SuppressLint("MissingPermission")
-    fun start(peerId: ByteArray): Boolean {
+    fun start(peerId: ByteArray, nickname: ByteArray?): Boolean {
         stop()
         val adapter = adapter()
         if (adapter == null || !adapter.isEnabled) {
-            _error.value = "Bluetooth выключен"
+            _error.value = context.getString(R.string.err_bt_off)
             return false
         }
         val leAdvertiser = try {
             adapter.bluetoothLeAdvertiser
         } catch (e: SecurityException) {
-            _error.value = "Нет разрешения на BLE-рекламу"
+            _error.value = context.getString(R.string.err_adv_permission)
             return false
         }
         if (leAdvertiser == null) {
@@ -71,12 +73,21 @@ class BleAdvertiser(private val context: Context) {
             .addServiceUuid(BleConstants.SERVICE_UUID)
             .addServiceData(BleConstants.SERVICE_UUID, peerId)
             .build()
+        // С scan-response стек переключает неподключаемую рекламу на ADV_SCAN_IND:
+        // сканеры дозапрашивают второй пакет, подключаться по-прежнему нельзя.
+        val scanResponse = nickname?.takeIf { it.isNotEmpty() }?.let {
+            AdvertiseData.Builder()
+                .setIncludeDeviceName(false)
+                .setIncludeTxPowerLevel(false)
+                .addServiceData(BleConstants.NICKNAME_UUID, it)
+                .build()
+        }
 
         val cb = object : AdvertiseCallback() {
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
                 _advertising.value = true
                 _error.value = null
-                Log.d(TAG, "advertising started")
+                Log.d(TAG, "advertising started, nickname=${scanResponse != null}")
             }
 
             override fun onStartFailure(errorCode: Int) {
@@ -87,15 +98,19 @@ class BleAdvertiser(private val context: Context) {
         }
 
         return try {
-            leAdvertiser.startAdvertising(settings, data, cb)
+            if (scanResponse != null) {
+                leAdvertiser.startAdvertising(settings, data, scanResponse, cb)
+            } else {
+                leAdvertiser.startAdvertising(settings, data, cb)
+            }
             advertiser = leAdvertiser
             callback = cb
             true
         } catch (e: SecurityException) {
-            _error.value = "Нет разрешения на BLE-рекламу"
+            _error.value = context.getString(R.string.err_adv_permission)
             false
         } catch (e: IllegalStateException) {
-            _error.value = "Bluetooth недоступен: ${e.message}"
+            _error.value = context.getString(R.string.err_bt_unavailable, e.message)
             false
         }
     }
@@ -118,12 +133,12 @@ class BleAdvertiser(private val context: Context) {
     private fun adapter(): BluetoothAdapter? = context.getSystemService<BluetoothManager>()?.adapter
 
     private fun describe(code: Int): String = when (code) {
-        AdvertiseCallback.ADVERTISE_FAILED_DATA_TOO_LARGE -> "Рекламный пакет слишком большой"
-        AdvertiseCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS -> "Слишком много активных рекламодателей на устройстве"
-        AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED -> "Реклама уже запущена"
-        AdvertiseCallback.ADVERTISE_FAILED_INTERNAL_ERROR -> "Внутренняя ошибка Bluetooth-стека при запуске рекламы"
-        AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED -> "Устройство не поддерживает BLE-рекламу"
-        else -> "Ошибка BLE-рекламы ($code)"
+        AdvertiseCallback.ADVERTISE_FAILED_DATA_TOO_LARGE -> context.getString(R.string.err_adv_too_large)
+        AdvertiseCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS -> context.getString(R.string.err_adv_too_many)
+        AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED -> context.getString(R.string.err_adv_already_started)
+        AdvertiseCallback.ADVERTISE_FAILED_INTERNAL_ERROR -> context.getString(R.string.err_adv_internal)
+        AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED -> context.getString(R.string.err_adv_unsupported)
+        else -> context.getString(R.string.err_adv_generic, code)
     }
 
     companion object {

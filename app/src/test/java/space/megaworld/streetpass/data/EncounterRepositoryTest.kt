@@ -149,6 +149,19 @@ class EncounterRepositoryTest {
     }
 
     @Test
+    fun nicknameIsStoredAndKeptWhenPacketHasNone() = runBlocking {
+        repository.processSighting(peer, -60, t0, 60, -95, true, nickname = "Alice")
+        repository.processSighting(peer, -60, t0 + minute, 60, -95, true, nickname = null)
+
+        assertEquals("Alice", db.peerDao().getById(peer)!!.nickname)
+        assertEquals("Alice", repository.recent(10).first().single().nickname)
+
+        repository.processSighting(peer, -60, t0 + 2 * minute, 60, -95, true, nickname = "Bob")
+
+        assertEquals("Bob", db.peerDao().getById(peer)!!.nickname)
+    }
+
+    @Test
     fun clearAllRemovesPeersAndEncounters() = runBlocking {
         sight()
 

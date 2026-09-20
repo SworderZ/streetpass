@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">StreetPass</string>
+
+    <!-- Вкладки -->
+    <string name="tab_home">Главная</string>
+    <string name="tab_history">История</string>
+    <string name="tab_stats">Статистика</string>
+    <string name="tab_settings">Настройки</string>
+
+    <!-- Главная -->
+    <string name="discovery_title">Обнаружение</string>
+    <string name="discovery_running">Работает в фоне</string>
+    <string name="discovery_off">Выключено</string>
+    <string name="status_advertising">Передача</string>
+    <string name="status_scanning">Сканирование</string>
+    <string name="last_signal">Последний сигнал: %1$s</string>
+    <string name="none_dash">—</string>
+
+    <string name="perm_title">Нужны разрешения</string>
+    <string name="perm_text_legacy">Для поиска других устройств по Bluetooth Android до 12-й версии требует разрешение на геолокацию. Приложение не определяет и не сохраняет местоположение — это требование системы к BLE-сканированию.</string>
+    <string name="perm_text_modern">Для передачи и поиска по Bluetooth нужно разрешение «Устройства поблизости». Геолокация не запрашивается.</string>
+    <string name="perm_action">Выдать разрешения</string>
+
+    <string name="bt_off_title">Bluetooth выключен</string>
+    <string name="bt_off_text">Без Bluetooth обнаружение не работает. После включения оно продолжится само.</string>
+    <string name="bt_off_action">Открыть настройки Bluetooth</string>
+
+    <string name="ble_error_title">Ошибка Bluetooth</string>
+
+    <string name="adv_unsupported_title">Передача недоступна</string>
+    <string name="adv_unsupported_text">Bluetooth-чип этого устройства не умеет BLE-рекламу. Вы будете видеть других пользователей, но они вас — нет.</string>
+
+    <string name="notif_denied_title">Уведомления запрещены</string>
+    <string name="notif_denied_text">Обнаружение работает и без них, но постоянное уведомление со счётчиком показываться не будет.</string>
+    <string name="notif_allow">Разрешить</string>
+
+    <string name="tile_today_encounters">встреч сегодня</string>
+    <string name="tile_today_people">людей сегодня</string>
+    <string name="tile_total_people">уникальных всего</string>
+    <string name="tile_total_encounters">встреч всего</string>
+
+    <string name="recent_title">Последние встречи</string>
+    <string name="recent_all">Вся история</string>
+    <string name="recent_empty">Пока ни одной встречи. Включите обнаружение и носите телефон с собой — другие пользователи StreetPass появятся здесь.</string>
+
+    <string name="identity_title">Как вас видят другие</string>
+    <string name="identity_no_nickname">Ник не задан — в эфир уходит только ID. Задать его можно в настройках.</string>
+    <string name="identity_text">ID — это всё, что телефон передаёт в эфир: 8 случайных байт, никак не связанных с вами, аккаунтом или устройством. По ним другие пользователи считают встречу с вами. Сменить ID можно в настройках.</string>
+
+    <!-- Строка встречи -->
+    <string name="first_meeting">Первая встреча</string>
+    <string name="meeting_number">Встреча №%1$d</string>
+    <string name="rssi_dbm">%1$d dBm</string>
+
+    <!-- История -->
+    <string name="history_empty">История пуста.\n\nВключите обнаружение на главном экране и держите телефон при себе. Как только рядом окажется другой пользователь StreetPass с включённым приложением, встреча появится здесь.</string>
+    <string name="day_today">Сегодня</string>
+    <string name="day_yesterday">Вчера</string>
+    <string name="history_section">%1$s · %2$d</string>
+
+    <!-- Статистика -->
+    <string name="stats_today">Сегодня</string>
+    <string name="stats_week">Последние 7 дней</string>
+    <string name="stats_all_time">За всё время</string>
+    <string name="stats_top">Чаще всего встречаются</string>
+    <string name="stat_encounters">встреч</string>
+    <string name="stat_people">людей</string>
+    <string name="row_encounters">Встреч</string>
+    <string name="row_people">Уникальных людей</string>
+    <string name="row_avg">Среднее встреч на человека</string>
+    <string name="top_empty">Пока некого показать.</string>
+    <string name="top_last">последняя: %1$s</string>
+
+    <plurals name="encounters_count">
+        <item quantity="one">%d встреча</item>
+        <item quantity="few">%d встречи</item>
+        <item quantity="many">%d встреч</item>
+        <item quantity="other">%d встречи</item>
+    </plurals>
+    <plurals name="minutes_count">
+        <item quantity="one">%d минуту</item>
+        <item quantity="few">%d минуты</item>
+        <item quantity="many">%d минут</item>
+        <item quantity="other">%d минуты</item>
+    </plurals>
+
+    <!-- Настройки: профиль -->
+    <string name="section_profile">Профиль</string>
+    <string name="nickname_label">Ник</string>
+    <string name="nickname_hint">Показывается другим пользователям вместо вашего ID</string>
+    <string name="nickname_bytes">%1$d / %2$d байт</string>
+    <string name="nickname_save">Сохранить</string>
+    <string name="nickname_warning">Ник передаётся в эфир открытым текстом: его прочитает любой Bluetooth-сканер рядом. Оставьте пустым, чтобы остаться полностью анонимным.</string>
+
+    <!-- Настройки: обнаружение -->
+    <string name="section_discovery">Обнаружение</string>
+    <string name="sw_advertise_title">Передавать свой ID</string>
+    <string name="sw_advertise_sub">Другие пользователи смогут засчитать встречу с вами</string>
+    <string name="sw_scan_title">Искать других</string>
+    <string name="sw_scan_sub">Сканировать эфир и записывать встречи</string>
+    <string name="sw_autostart_title">Автозапуск после перезагрузки</string>
+    <string name="sw_autostart_sub">Если обнаружение было включено, поднять его при старте системы</string>
+
+    <!-- Настройки: энергопотребление -->
+    <string name="section_power">Энергопотребление</string>
+    <string name="power_saver_title">Экономия</string>
+    <string name="power_saver_desc">8 секунд сканирования каждые 2 минуты. Максимальное время от батареи, но встречи мимоходом могут быть пропущены.</string>
+    <string name="power_balanced_title">Баланс</string>
+    <string name="power_balanced_desc">10 секунд сканирования каждую минуту. Разумный компромисс для повседневного ношения.</string>
+    <string name="power_max_title">Максимум</string>
+    <string name="power_max_desc">Непрерывное сканирование. Ничего не пропускает, но заметно расходует батарею.</string>
+
+    <!-- Настройки: антидубль -->
+    <string name="section_cooldown">Антидубль</string>
+    <string name="cooldown_text">Повторная встреча с тем же человеком засчитывается не раньше, чем через %1$s</string>
+    <string name="cooldown_help">Всё это время человек может быть рядом, сигнал будет приниматься, но новая встреча в историю не попадёт. Диапазон: %1$d–%2$d минут.</string>
+
+    <!-- Настройки: порог RSSI -->
+    <string name="section_rssi">Порог сигнала</string>
+    <string name="rssi_text">Не ниже %1$d dBm — %2$s</string>
+    <string name="rssi_hint_touch">только вплотную, до полуметра</string>
+    <string name="rssi_hint_near">примерно 1–2 метра</string>
+    <string name="rssi_hint_room">примерно 3–6 метров, одна комната</string>
+    <string name="rssi_hint_far">около 10 метров, соседнее помещение</string>
+    <string name="rssi_hint_max">максимальная дальность, включая соседей за стеной</string>
+    <string name="rssi_help">Пакеты слабее порога отбрасываются: так не считаются люди за стеной или этажом ниже. Чем ближе к −40, тем ближе должен быть человек. Оценка дистанции приблизительная и зависит от телефона.</string>
+
+    <!-- Настройки: приватность -->
+    <string name="section_privacy">Приватность</string>
+    <string name="privacy_text">Что собирается: случайный 8-байтовый ID каждого встреченного устройства, его ник, если он его передаёт, время встречи и, если включено ниже, уровень сигнала.\n\nЧто не собирается: местоположение, MAC-адреса, имена устройств, контакты, любые данные о вас. Всё хранится только на этом телефоне: в интернет приложение ходит только за проверкой обновлений по вашей команде, а из облачного бэкапа оно исключено.</string>
+    <string name="sw_store_rssi_title">Хранить уровень сигнала</string>
+    <string name="sw_store_rssi_sub">RSSI в истории помогает понять, насколько близко был человек</string>
+    <string name="your_id">Ваш ID</string>
+    <string name="btn_change_id">Сменить ID</string>
+    <string name="btn_clear_history">Очистить историю</string>
+    <string name="dialog_regen_title">Сменить ID?</string>
+    <string name="dialog_regen_text">Другие пользователи начнут видеть вас как нового человека: при следующей встрече у них запишется «первая встреча». Ваша история не изменится.</string>
+    <string name="dialog_regen_confirm">Сменить</string>
+    <string name="dialog_clear_title">Очистить историю?</string>
+    <string name="dialog_clear_text">Все встречи и статистика будут удалены безвозвратно. Обнаружение продолжит работать.</string>
+    <string name="dialog_clear_confirm">Очистить</string>
+    <string name="cancel">Отмена</string>
+
+    <!-- Настройки: обновления -->
+    <string name="section_updates">Обновления</string>
+    <string name="update_installed">Установлена версия %1$s</string>
+    <string name="update_idle_text">Проверка — единственное, ради чего приложению нужен интернет: один запрос к GitHub по нажатию кнопки. О встречах и вашем ID в нём ничего нет.</string>
+    <string name="update_check">Проверить обновления</string>
+    <string name="update_checking">Спрашиваем GitHub…</string>
+    <string name="update_up_to_date">У вас последняя версия (на GitHub — %1$s).</string>
+    <string name="update_check_again">Проверить ещё раз</string>
+    <string name="update_available">Доступна версия %1$s</string>
+    <string name="update_no_apk">К релизу не приложен APK — скачать можно только вручную со страницы релиза.</string>
+    <string name="update_download">Скачать и установить</string>
+    <string name="update_open_github">Открыть на GitHub</string>
+    <string name="update_downloading">Загрузка %1$s…</string>
+    <string name="update_downloaded_text">Файл скачан, должен открыться установщик. Если он не появился — откройте уведомление о загрузке.</string>
+    <string name="update_redownload">Скачать заново</string>
+    <string name="update_retry_download">Повторить загрузку</string>
+    <string name="retry">Повторить</string>
+    <string name="close">Закрыть</string>
+
+    <string name="err_no_releases">На GitHub пока нет ни одного релиза</string>
+    <string name="err_github_unreachable">Не удалось связаться с GitHub: %1$s</string>
+    <string name="err_no_network">нет сети</string>
+    <string name="err_bad_response">GitHub вернул неожиданный ответ</string>
+    <string name="err_download_manager">Менеджер загрузок недоступен</string>
+    <string name="err_bad_url">Некорректная ссылка на APK</string>
+    <string name="err_download_failed">Загрузка не удалась (код %1$d)</string>
+    <string name="err_file_missing">Скачанный файл не найден</string>
+    <string name="err_no_installer">Не найден системный установщик пакетов</string>
+
+    <!-- Сервис / уведомление -->
+    <string name="notif_channel_name">Обнаружение</string>
+    <string name="notif_channel_desc">Постоянное уведомление, пока работает обнаружение</string>
+    <string name="notif_text">Встреч сегодня: %1$d</string>
+    <string name="notif_stop">Выключить</string>
+    <string name="err_bt_off_service">Bluetooth выключен. Включите его — обнаружение продолжится автоматически.</string>
+    <string name="err_fgs_permission">Не удалось запустить фоновый сервис: нет разрешений Bluetooth</string>
+    <string name="err_fgs_not_allowed">Система запретила запуск фонового сервиса: %1$s</string>
+
+    <!-- BLE -->
+    <string name="err_bt_off">Bluetooth выключен</string>
+    <string name="err_bt_unavailable">Bluetooth недоступен: %1$s</string>
+    <string name="err_adv_permission">Нет разрешения на BLE-рекламу</string>
+    <string name="err_adv_too_large">Рекламный пакет слишком большой</string>
+    <string name="err_adv_too_many">Слишком много активных рекламодателей на устройстве</string>
+    <string name="err_adv_already_started">Реклама уже запущена</string>
+    <string name="err_adv_internal">Внутренняя ошибка Bluetooth-стека при запуске рекламы</string>
+    <string name="err_adv_unsupported">Устройство не поддерживает BLE-рекламу</string>
+    <string name="err_adv_generic">Ошибка BLE-рекламы (%1$d)</string>
+    <string name="err_scan_permission">Нет разрешения на BLE-сканирование</string>
+    <string name="err_scanner_unavailable">BLE-сканер недоступен</string>
+    <string name="err_scan_already_started">Сканирование уже запущено</string>
+    <string name="err_scan_registration">Не удалось зарегистрировать сканер в Bluetooth-стеке. Обычно помогает выключить и включить Bluetooth</string>
+    <string name="err_scan_internal">Внутренняя ошибка Bluetooth-стека при сканировании</string>
+    <string name="err_scan_unsupported">Устройство не поддерживает нужный режим сканирования</string>
+    <string name="err_scan_hw_resources">Bluetooth-контроллер исчерпал ресурсы для сканирования</string>
+    <string name="err_scan_too_frequent">Слишком частые перезапуски сканирования, система временно блокирует их</string>
+    <string name="err_scan_generic">Ошибка BLE-сканирования (%1$d)</string>
+</resources>

@@ -13,8 +13,10 @@ import android.util.Log
 import androidx.core.content.getSystemService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import space.megaworld.streetpass.R
 import space.megaworld.streetpass.core.BleConstants
 import space.megaworld.streetpass.core.Hex
+import space.megaworld.streetpass.core.Nicknames
 
 /**
  * Сканер с обязательным фильтром по SERVICE_UUID. Колбэк [onSighting] приходит не в
@@ -22,7 +24,7 @@ import space.megaworld.streetpass.core.Hex
  */
 class BleScanner(
     private val context: Context,
-    private val onSighting: (peerId: String, rssi: Int) -> Unit,
+    private val onSighting: (peerId: String, rssi: Int, nickname: String?) -> Unit,
 ) {
 
     private val _scanning = MutableStateFlow(false)
@@ -41,12 +43,12 @@ class BleScanner(
         stop()
         val adapter = adapter()
         if (adapter == null || !adapter.isEnabled) {
-            _error.value = "Bluetooth выключен"
+            _error.value = context.getString(R.string.err_bt_off)
             return false
         }
         val leScanner = adapter.bluetoothLeScanner
         if (leScanner == null) {
-            _error.value = "BLE-сканер недоступен"
+            _error.value = context.getString(R.string.err_scanner_unavailable)
             return false
         }
 
@@ -87,10 +89,10 @@ class BleScanner(
             Log.d(TAG, "scan started, mode=$scanMode")
             true
         } catch (e: SecurityException) {
-            _error.value = "Нет разрешения на BLE-сканирование"
+            _error.value = context.getString(R.string.err_scan_permission)
             false
         } catch (e: IllegalStateException) {
-            _error.value = "Bluetooth недоступен: ${e.message}"
+            _error.value = context.getString(R.string.err_bt_unavailable, e.message)
             false
         }
     }
@@ -113,22 +115,24 @@ class BleScanner(
     private fun handle(result: ScanResult) {
         // Из результата берём только Service Data и RSSI. MAC и имя не читаем: MAC система
         // ротирует и он никого не идентифицирует, имя устройства — персональные данные.
-        val data = result.scanRecord?.getServiceData(BleConstants.SERVICE_UUID) ?: return
+        val record = result.scanRecord ?: return
+        val data = record.getServiceData(BleConstants.SERVICE_UUID) ?: return
         if (data.size != BleConstants.PEER_ID_BYTES) return
-        onSighting(Hex.encode(data), result.rssi)
+        // Ник есть только если стек успел получить scan-response; иначе null.
+        val nickname = record.getServiceData(BleConstants.NICKNAME_UUID)?.let(Nicknames::decode)
+        onSighting(Hex.encode(data), result.rssi, nickname)
     }
 
     private fun adapter(): BluetoothAdapter? = context.getSystemService<BluetoothManager>()?.adapter
 
     private fun describe(code: Int): String = when (code) {
-        ScanCallback.SCAN_FAILED_ALREADY_STARTED -> "Сканирование уже запущено"
-        ScanCallback.SCAN_FAILED_APPLICATION_REGISTRATION_FAILED ->
-            "Не удалось зарегистрировать сканер в Bluetooth-стеке. Обычно помогает выключить и включить Bluetooth"
-        ScanCallback.SCAN_FAILED_INTERNAL_ERROR -> "Внутренняя ошибка Bluetooth-стека при сканировании"
-        ScanCallback.SCAN_FAILED_FEATURE_UNSUPPORTED -> "Устройство не поддерживает нужный режим сканирования"
-        SCAN_FAILED_OUT_OF_HARDWARE_RESOURCES -> "Bluetooth-контроллер исчерпал ресурсы для сканирования"
-        SCAN_FAILED_SCANNING_TOO_FREQUENTLY -> "Слишком частые перезапуски сканирования, система временно блокирует их"
-        else -> "Ошибка BLE-сканирования ($code)"
+        ScanCallback.SCAN_FAILED_ALREADY_STARTED -> context.getString(R.string.err_scan_already_started)
+        ScanCallback.SCAN_FAILED_APPLICATION_REGISTRATION_FAILED -> context.getString(R.string.err_scan_registration)
+        ScanCallback.SCAN_FAILED_INTERNAL_ERROR -> context.getString(R.string.err_scan_internal)
+        ScanCallback.SCAN_FAILED_FEATURE_UNSUPPORTED -> context.getString(R.string.err_scan_unsupported)
+        SCAN_FAILED_OUT_OF_HARDWARE_RESOURCES -> context.getString(R.string.err_scan_hw_resources)
+        SCAN_FAILED_SCANNING_TOO_FREQUENTLY -> context.getString(R.string.err_scan_too_frequent)
+        else -> context.getString(R.string.err_scan_generic, code)
     }
 
     companion object {

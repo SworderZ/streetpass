@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONException
 import org.json.JSONObject
+import space.megaworld.streetpass.R
 import space.megaworld.streetpass.core.Versions
 
 data class ReleaseInfo(
@@ -67,13 +68,15 @@ class UpdateRepository(
                 UpdateState.UpToDate(release.version)
             }
         } catch (e: NoReleasesException) {
-            UpdateState.Error("На GitHub пока нет ни одного релиза")
+            UpdateState.Error(context.getString(R.string.err_no_releases))
         } catch (e: IOException) {
             Log.w(TAG, "update check failed", e)
-            UpdateState.Error("Не удалось связаться с GitHub: ${e.message ?: "нет сети"}")
+            UpdateState.Error(
+                context.getString(R.string.err_github_unreachable, e.message ?: context.getString(R.string.err_no_network)),
+            )
         } catch (e: JSONException) {
             Log.w(TAG, "unexpected GitHub response", e)
-            UpdateState.Error("GitHub вернул неожиданный ответ")
+            UpdateState.Error(context.getString(R.string.err_bad_response))
         }
     }
 
@@ -83,7 +86,7 @@ class UpdateRepository(
         val url = release.apkUrl ?: return
         val manager = context.getSystemService<DownloadManager>()
         if (manager == null) {
-            _state.value = UpdateState.Error("Менеджер загрузок недоступен", release)
+            _state.value = UpdateState.Error(context.getString(R.string.err_download_manager), release)
             return
         }
         downloadJob?.cancel()
@@ -102,7 +105,7 @@ class UpdateRepository(
         val id = try {
             manager.enqueue(request)
         } catch (e: IllegalArgumentException) {
-            _state.value = UpdateState.Error("Некорректная ссылка на APK", release)
+            _state.value = UpdateState.Error(context.getString(R.string.err_bad_url), release)
             return
         }
 
@@ -116,7 +119,7 @@ class UpdateRepository(
                         return@launch
                     }
                     DownloadManager.STATUS_FAILED -> {
-                        _state.value = UpdateState.Error("Загрузка не удалась (код ${progress.reason})", release)
+                        _state.value = UpdateState.Error(context.getString(R.string.err_download_failed, progress.reason), release)
                         return@launch
                     }
                     else -> _state.value = UpdateState.Downloading(release, progress.percent)
@@ -148,7 +151,7 @@ class UpdateRepository(
     private fun launchInstaller(manager: DownloadManager, id: Long, release: ReleaseInfo) {
         val uri = manager.getUriForDownloadedFile(id)
         if (uri == null) {
-            _state.value = UpdateState.Error("Скачанный файл не найден", release)
+            _state.value = UpdateState.Error(context.getString(R.string.err_file_missing), release)
             return
         }
         val intent = Intent(Intent.ACTION_VIEW)
@@ -157,7 +160,7 @@ class UpdateRepository(
         try {
             context.startActivity(intent)
         } catch (e: ActivityNotFoundException) {
-            _state.value = UpdateState.Error("Не найден системный установщик пакетов", release)
+            _state.value = UpdateState.Error(context.getString(R.string.err_no_installer), release)
         }
     }
 

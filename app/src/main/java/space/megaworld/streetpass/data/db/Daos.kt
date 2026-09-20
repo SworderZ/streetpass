@@ -45,9 +45,10 @@ interface EncounterDao {
 
     @Query(
         """
-        SELECT e.id, e.peerId, e.timestamp, e.rssi, e.firstMeeting,
+        SELECT e.id, e.peerId, p.nickname, e.timestamp, e.rssi, e.firstMeeting,
                (SELECT COUNT(*) FROM encounters e2 WHERE e2.peerId = e.peerId AND e2.id <= e.id) AS ordinal
         FROM encounters e
+        JOIN peers p ON p.peerId = e.peerId
         ORDER BY e.timestamp DESC, e.id DESC
         LIMIT :limit
         """,

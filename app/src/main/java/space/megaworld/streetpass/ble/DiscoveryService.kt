@@ -39,6 +39,7 @@ import space.megaworld.streetpass.R
 import space.megaworld.streetpass.StreetPassApp
 import space.megaworld.streetpass.core.BleConstants
 import space.megaworld.streetpass.core.Hex
+import space.megaworld.streetpass.core.Nicknames
 import space.megaworld.streetpass.data.SightingResult
 import space.megaworld.streetpass.data.settings.AppSettings
 
@@ -59,7 +60,7 @@ data class DiscoveryState(
  */
 class DiscoveryService : Service() {
 
-    private class Sighting(val peerId: String, val rssi: Int, val at: Long)
+    private class Sighting(val peerId: String, val rssi: Int, val nickname: String?, val at: Long)
 
     private lateinit var container: AppContainer
     private lateinit var advertiser: BleAdvertiser
@@ -92,7 +93,7 @@ class DiscoveryService : Service() {
                     advertiser.stop()
                     scanner.stop()
                     state.update { it.copy(bluetoothOn = false) }
-                    serviceError.value = BLUETOOTH_OFF_MESSAGE
+                    serviceError.value = getString(R.string.err_bt_off_service)
                 }
                 BluetoothAdapter.STATE_ON -> {
                     Log.d(TAG, "bluetooth on, resuming radios")
@@ -110,8 +111,8 @@ class DiscoveryService : Service() {
         super.onCreate()
         container = (application as StreetPassApp).container
         advertiser = BleAdvertiser(this)
-        scanner = BleScanner(this) { peerId, rssi ->
-            sightings.trySend(Sighting(peerId, rssi, System.currentTimeMillis()))
+        scanner = BleScanner(this) { peerId, rssi, nickname ->
+            sightings.trySend(Sighting(peerId, rssi, nickname, System.currentTimeMillis()))
         }
         createNotificationChannel()
 
@@ -211,7 +212,7 @@ class DiscoveryService : Service() {
             val adapter = getSystemService<BluetoothManager>()?.adapter
             if (adapter == null || !adapter.isEnabled) {
                 state.update { it.copy(bluetoothOn = false) }
-                serviceError.value = BLUETOOTH_OFF_MESSAGE
+                serviceError.value = getString(R.string.err_bt_off_service)
                 return@launch
             }
             state.update { it.copy(bluetoothOn = true) }
@@ -222,7 +223,8 @@ class DiscoveryService : Service() {
             ownId = container.identityRepository.getOrCreate()
 
             if (current.advertiseEnabled) {
-                advertiser.start(Hex.decode(ownId))
+                val nickname = container.identityRepository.currentNickname()
+                advertiser.start(Hex.decode(ownId), Nicknames.encode(nickname))
             }
             if (!current.scanEnabled) return@launch
 
@@ -266,6 +268,7 @@ class DiscoveryService : Service() {
                 cooldownMinutes = cfg.cooldownMinutes,
                 minRssi = cfg.minRssi,
                 storeRssi = cfg.storeRssi,
+                nickname = sighting.nickname,
             )
         } catch (e: SQLException) {
             Log.e(TAG, "failed to persist sighting", e)
@@ -287,12 +290,12 @@ class DiscoveryService : Service() {
     } catch (e: SecurityException) {
         // На API 34+ тип connectedDevice требует выданного Bluetooth-разрешения.
         Log.e(TAG, "startForeground rejected", e)
-        serviceError.value = "Не удалось запустить фоновый сервис: нет разрешений Bluetooth"
+        serviceError.value = getString(R.string.err_fgs_permission)
         false
     } catch (e: IllegalStateException) {
         // ForegroundServiceStartNotAllowedException и родня: запуск из фона запрещён.
         Log.e(TAG, "startForeground not allowed", e)
-        serviceError.value = "Система запретила запуск фонового сервиса: ${e.message}"
+        serviceError.value = getString(R.string.err_fgs_not_allowed, e.message)
         false
     }
 
@@ -317,13 +320,13 @@ class DiscoveryService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("StreetPass")
-            .setContentText("Встреч сегодня: $todayCount")
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(getString(R.string.notif_text, todayCount))
             .setOngoing(true)
             .setSilent(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(openApp)
-            .addAction(0, "Выключить", stop)
+            .addAction(0, getString(R.string.notif_stop), stop)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
@@ -331,8 +334,12 @@ class DiscoveryService : Service() {
     }
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(CHANNEL_ID, "Обнаружение", NotificationManager.IMPORTANCE_LOW).apply {
-            description = "Постоянное уведомление, пока работает обнаружение"
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            getString(R.string.notif_channel_name),
+            NotificationManager.IMPORTANCE_LOW,
+        ).apply {
+            description = getString(R.string.notif_channel_desc)
             enableVibration(false)
             setSound(null, null)
             setShowBadge(false)
@@ -348,9 +355,6 @@ class DiscoveryService : Service() {
         private const val ACTION_START = "space.megaworld.streetpass.action.START"
         private const val ACTION_STOP = "space.megaworld.streetpass.action.STOP"
         private const val ACTION_REFRESH = "space.megaworld.streetpass.action.REFRESH"
-
-        private const val BLUETOOTH_OFF_MESSAGE =
-            "Bluetooth выключен. Включите его — обнаружение продолжится автоматически."
 
         fun start(context: Context) {
             ContextCompat.startForegroundService(context, intent(context, ACTION_START))

@@ -25,6 +25,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -39,6 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,8 +56,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import space.megaworld.streetpass.AppContainer
 import space.megaworld.streetpass.BuildConfig
+import space.megaworld.streetpass.R
 import space.megaworld.streetpass.ble.DiscoveryService
+import space.megaworld.streetpass.core.BleConstants
 import space.megaworld.streetpass.core.Hex
+import space.megaworld.streetpass.core.Nicknames
 import space.megaworld.streetpass.data.settings.AppSettings
 import space.megaworld.streetpass.data.settings.PowerMode
 import space.megaworld.streetpass.data.update.ReleaseInfo
@@ -73,6 +79,11 @@ class SettingsViewModel(
 
     val peerId: StateFlow<String> = container.identityRepository.idHex
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    val nickname: StateFlow<String> = container.identityRepository.nickname
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    fun setNickname(value: String) = updateRadio { container.identityRepository.setNickname(value) }
 
     fun setAdvertiseEnabled(value: Boolean) = updateRadio { container.settingsRepository.setAdvertiseEnabled(value) }
 
@@ -133,6 +144,7 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val peerId by viewModel.peerId.collectAsStateWithLifecycle()
+    val nickname by viewModel.nickname.collectAsStateWithLifecycle()
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -145,26 +157,35 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            SectionTitle("Обнаружение")
+            SectionTitle(stringResource(R.string.section_profile))
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    NicknameEditor(saved = nickname, onSave = viewModel::setNickname)
+                }
+            }
+        }
+
+        item {
+            SectionTitle(stringResource(R.string.section_discovery))
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
                     SwitchRow(
-                        title = "Передавать свой ID",
-                        subtitle = "Другие пользователи смогут засчитать встречу с вами",
+                        title = stringResource(R.string.sw_advertise_title),
+                        subtitle = stringResource(R.string.sw_advertise_sub),
                         checked = settings.advertiseEnabled,
                         onChange = viewModel::setAdvertiseEnabled,
                     )
                     HorizontalDivider()
                     SwitchRow(
-                        title = "Искать других",
-                        subtitle = "Сканировать эфир и записывать встречи",
+                        title = stringResource(R.string.sw_scan_title),
+                        subtitle = stringResource(R.string.sw_scan_sub),
                         checked = settings.scanEnabled,
                         onChange = viewModel::setScanEnabled,
                     )
                     HorizontalDivider()
                     SwitchRow(
-                        title = "Автозапуск после перезагрузки",
-                        subtitle = "Если обнаружение было включено, поднять его при старте системы",
+                        title = stringResource(R.string.sw_autostart_title),
+                        subtitle = stringResource(R.string.sw_autostart_sub),
                         checked = settings.autoStart,
                         onChange = viewModel::setAutoStart,
                     )
@@ -173,7 +194,7 @@ fun SettingsScreen(
         }
 
         item {
-            SectionTitle("Энергопотребление")
+            SectionTitle(stringResource(R.string.section_power))
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(vertical = 4.dp)) {
                     PowerMode.entries.forEach { mode ->
@@ -188,7 +209,7 @@ fun SettingsScreen(
         }
 
         item {
-            SectionTitle("Антидубль")
+            SectionTitle(stringResource(R.string.section_cooldown))
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     CooldownSlider(value = settings.cooldownMinutes, onCommit = viewModel::setCooldownMinutes)
@@ -197,7 +218,7 @@ fun SettingsScreen(
         }
 
         item {
-            SectionTitle("Порог сигнала")
+            SectionTitle(stringResource(R.string.section_rssi))
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     RssiSlider(value = settings.minRssi, onCommit = viewModel::setMinRssi)
@@ -206,28 +227,24 @@ fun SettingsScreen(
         }
 
         item {
-            SectionTitle("Приватность")
+            SectionTitle(stringResource(R.string.section_privacy))
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Что собирается: случайный 8-байтовый ID каждого встреченного устройства, " +
-                            "время встречи и, если включено ниже, уровень сигнала.\n\n" +
-                            "Что не собирается: местоположение, MAC-адреса, имена устройств, " +
-                            "контакты, любые данные о вас. Всё хранится только на этом телефоне: " +
-                            "у приложения нет доступа в интернет и оно исключено из облачного бэкапа.",
+                        text = stringResource(R.string.privacy_text),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     SwitchRow(
-                        title = "Хранить уровень сигнала",
-                        subtitle = "RSSI в истории помогает понять, насколько близко был человек",
+                        title = stringResource(R.string.sw_store_rssi_title),
+                        subtitle = stringResource(R.string.sw_store_rssi_sub),
                         checked = settings.storeRssi,
                         onChange = viewModel::setStoreRssi,
                     )
                     HorizontalDivider()
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("Ваш ID", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.your_id), style = MaterialTheme.typography.labelMedium)
                     Text(
                         text = if (peerId.isEmpty()) "…" else Hex.grouped(peerId),
                         style = MaterialTheme.typography.titleMedium,
@@ -236,10 +253,10 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedButton(onClick = { confirmRegenerate = true }, modifier = Modifier.weight(1f)) {
-                            Text("Сменить ID")
+                            Text(stringResource(R.string.btn_change_id))
                         }
                         OutlinedButton(onClick = { confirmClear = true }, modifier = Modifier.weight(1f)) {
-                            Text("Очистить историю")
+                            Text(stringResource(R.string.btn_clear_history))
                         }
                     }
                 }
@@ -247,7 +264,7 @@ fun SettingsScreen(
         }
 
         item {
-            SectionTitle("Обновления")
+            SectionTitle(stringResource(R.string.section_updates))
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     UpdateSection(
@@ -285,21 +302,16 @@ fun SettingsScreen(
     if (confirmRegenerate) {
         AlertDialog(
             onDismissRequest = { confirmRegenerate = false },
-            title = { Text("Сменить ID?") },
-            text = {
-                Text(
-                    "Другие пользователи начнут видеть вас как нового человека: при следующей " +
-                        "встрече у них запишется «первая встреча». Ваша история не изменится.",
-                )
-            },
+            title = { Text(stringResource(R.string.dialog_regen_title)) },
+            text = { Text(stringResource(R.string.dialog_regen_text)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmRegenerate = false
                     viewModel.regenerateId()
-                }) { Text("Сменить") }
+                }) { Text(stringResource(R.string.dialog_regen_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmRegenerate = false }) { Text("Отмена") }
+                TextButton(onClick = { confirmRegenerate = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -307,18 +319,56 @@ fun SettingsScreen(
     if (confirmClear) {
         AlertDialog(
             onDismissRequest = { confirmClear = false },
-            title = { Text("Очистить историю?") },
-            text = { Text("Все встречи и статистика будут удалены безвозвратно. Обнаружение продолжит работать.") },
+            title = { Text(stringResource(R.string.dialog_clear_title)) },
+            text = { Text(stringResource(R.string.dialog_clear_text)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmClear = false
                     viewModel.clearHistory()
-                }) { Text("Очистить") }
+                }) { Text(stringResource(R.string.dialog_clear_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmClear = false }) { Text("Отмена") }
+                TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
+    }
+}
+
+@Composable
+private fun NicknameEditor(
+    saved: String,
+    onSave: (String) -> Unit,
+) {
+    var draft by remember(saved) { mutableStateOf(saved) }
+    val clean = Nicknames.sanitize(draft)
+    val bytes = Nicknames.byteLength(clean)
+    val dirty = clean != saved
+
+    OutlinedTextField(
+        value = draft,
+        onValueChange = { draft = it },
+        label = { Text(stringResource(R.string.nickname_label)) },
+        supportingText = {
+            Text(stringResource(R.string.nickname_bytes, bytes, BleConstants.NICKNAME_MAX_BYTES))
+        },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(
+        text = stringResource(R.string.nickname_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(
+        text = stringResource(R.string.nickname_warning),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+    Button(onClick = { onSave(clean) }, enabled = dirty) {
+        Text(stringResource(R.string.nickname_save))
     }
 }
 
@@ -331,32 +381,31 @@ private fun UpdateSection(
     onOpenPage: (String) -> Unit,
     onReset: () -> Unit,
 ) {
-    Text("Установлена версия $currentVersion", style = MaterialTheme.typography.bodyMedium)
+    Text(stringResource(R.string.update_installed, currentVersion), style = MaterialTheme.typography.bodyMedium)
     Spacer(modifier = Modifier.height(8.dp))
     when (state) {
         UpdateState.Idle -> {
             Text(
-                text = "Проверка — единственное, ради чего приложению нужен интернет: один запрос " +
-                    "к GitHub по нажатию кнопки. О встречах и вашем ID в нём ничего нет.",
+                text = stringResource(R.string.update_idle_text),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(12.dp))
-            OutlinedButton(onClick = onCheck) { Text("Проверить обновления") }
+            OutlinedButton(onClick = onCheck) { Text(stringResource(R.string.update_check)) }
         }
         UpdateState.Checking -> {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                Text("Спрашиваем GitHub…", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.update_checking), style = MaterialTheme.typography.bodyMedium)
             }
         }
         is UpdateState.UpToDate -> {
             Text(
-                text = "У вас последняя версия (на GitHub — ${state.latest}).",
+                text = stringResource(R.string.update_up_to_date, state.latest),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(modifier = Modifier.height(12.dp))
-            OutlinedButton(onClick = onCheck) { Text("Проверить ещё раз") }
+            OutlinedButton(onClick = onCheck) { Text(stringResource(R.string.update_check_again)) }
         }
         is UpdateState.Available -> {
             ReleaseDetails(state.release)
@@ -364,16 +413,16 @@ private fun UpdateSection(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (state.release.apkUrl != null) {
                     Button(onClick = { onDownload(state.release) }, modifier = Modifier.weight(1f)) {
-                        Text("Скачать и установить")
+                        Text(stringResource(R.string.update_download))
                     }
                 }
                 OutlinedButton(onClick = { onOpenPage(state.release.pageUrl) }, modifier = Modifier.weight(1f)) {
-                    Text("Открыть на GitHub")
+                    Text(stringResource(R.string.update_open_github))
                 }
             }
         }
         is UpdateState.Downloading -> {
-            Text("Загрузка ${state.release.version}…", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.update_downloading, state.release.version), style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(8.dp))
             val percent = state.percent
             if (percent == null) {
@@ -383,15 +432,11 @@ private fun UpdateSection(
             }
         }
         is UpdateState.Downloaded -> {
-            Text(
-                text = "Файл скачан, должен открыться установщик. Если он не появился — " +
-                    "откройте уведомление о загрузке.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Text(text = stringResource(R.string.update_downloaded_text), style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { onDownload(state.release) }) { Text("Скачать заново") }
-                TextButton(onClick = onReset) { Text("Закрыть") }
+                Button(onClick = { onDownload(state.release) }) { Text(stringResource(R.string.update_redownload)) }
+                TextButton(onClick = onReset) { Text(stringResource(R.string.close)) }
             }
         }
         is UpdateState.Error -> {
@@ -404,11 +449,11 @@ private fun UpdateSection(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 val release = state.release
                 if (release?.apkUrl != null) {
-                    Button(onClick = { onDownload(release) }) { Text("Повторить загрузку") }
+                    Button(onClick = { onDownload(release) }) { Text(stringResource(R.string.update_retry_download)) }
                 } else {
-                    OutlinedButton(onClick = onCheck) { Text("Повторить") }
+                    OutlinedButton(onClick = onCheck) { Text(stringResource(R.string.retry)) }
                 }
-                TextButton(onClick = onReset) { Text("Закрыть") }
+                TextButton(onClick = onReset) { Text(stringResource(R.string.close)) }
             }
         }
     }
@@ -417,7 +462,7 @@ private fun UpdateSection(
 @Composable
 private fun ReleaseDetails(release: ReleaseInfo) {
     Text(
-        text = "Доступна версия ${release.version}",
+        text = stringResource(R.string.update_available, release.version),
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
     )
@@ -434,7 +479,7 @@ private fun ReleaseDetails(release: ReleaseInfo) {
     if (release.apkUrl == null) {
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "К релизу не приложен APK — скачать можно только вручную со страницы релиза.",
+            text = stringResource(R.string.update_no_apk),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -483,9 +528,9 @@ private fun PowerModeRow(
     ) {
         RadioButton(selected = selected, onClick = onSelect)
         Column(modifier = Modifier.padding(start = 4.dp)) {
-            Text(mode.title, style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(mode.titleRes), style = MaterialTheme.typography.bodyLarge)
             Text(
-                text = mode.description,
+                text = stringResource(mode.descriptionRes),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -502,8 +547,10 @@ private fun CooldownSlider(
     var local by remember(value) { mutableIntStateOf(value) }
     val range = AppSettings.COOLDOWN_RANGE
     Text(
-        text = "Повторная встреча с тем же человеком засчитывается не раньше, чем через " +
-            Format.minutes(local),
+        text = stringResource(
+            R.string.cooldown_text,
+            pluralStringResource(R.plurals.minutes_count, local, local),
+        ),
         style = MaterialTheme.typography.bodyMedium,
     )
     Slider(
@@ -513,8 +560,7 @@ private fun CooldownSlider(
         valueRange = range.first.toFloat()..range.last.toFloat(),
     )
     Text(
-        text = "Всё это время человек может быть рядом, сигнал будет приниматься, но новая " +
-            "встреча в историю не попадёт. Диапазон: ${range.first}–${range.last} минут.",
+        text = stringResource(R.string.cooldown_help, range.first, range.last),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -528,7 +574,7 @@ private fun RssiSlider(
     var local by remember(value) { mutableIntStateOf(value) }
     val range = AppSettings.RSSI_RANGE
     Text(
-        text = "Не ниже $local dBm — ${Format.rssiDistanceHint(local)}",
+        text = stringResource(R.string.rssi_text, local, stringResource(Format.rssiDistanceHintRes(local))),
         style = MaterialTheme.typography.bodyMedium,
     )
     Slider(
@@ -538,9 +584,7 @@ private fun RssiSlider(
         valueRange = range.first.toFloat()..range.last.toFloat(),
     )
     Text(
-        text = "Пакеты слабее порога отбрасываются: так не считаются люди за стеной или этажом " +
-            "ниже. Чем ближе к −40, тем ближе должен быть человек. Оценка дистанции " +
-            "приблизительная и зависит от телефона.",
+        text = stringResource(R.string.rssi_help),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

@@ -18,18 +18,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.annotation.StringRes
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import space.megaworld.streetpass.R
 import space.megaworld.streetpass.ui.history.HistoryScreen
 import space.megaworld.streetpass.ui.home.HomeScreen
 import space.megaworld.streetpass.ui.settings.SettingsScreen
 import space.megaworld.streetpass.ui.stats.StatsScreen
 
-enum class AppTab(val title: String, val icon: ImageVector) {
-    HOME("Главная", Icons.Filled.Home),
-    HISTORY("История", Icons.Filled.History),
-    STATS("Статистика", Icons.Filled.BarChart),
-    SETTINGS("Настройки", Icons.Filled.Settings),
+enum class AppTab(@StringRes val titleRes: Int, val icon: ImageVector) {
+    HOME(R.string.tab_home, Icons.Filled.Home),
+    HISTORY(R.string.tab_history, Icons.Filled.History),
+    STATS(R.string.tab_stats, Icons.Filled.BarChart),
+    SETTINGS(R.string.tab_settings, Icons.Filled.Settings),
 }
 
 @Composable
@@ -44,7 +47,7 @@ fun AppRoot() {
                         selected = tab == item,
                         onClick = { tab = item },
                         icon = { Icon(item.icon, contentDescription = null) },
-                        label = { Text(item.title) },
+                        label = { Text(stringResource(item.titleRes)) },
                     )
                 }
             }

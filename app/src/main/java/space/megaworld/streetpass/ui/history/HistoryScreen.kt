@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -26,15 +27,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import space.megaworld.streetpass.AppContainer
+import space.megaworld.streetpass.R
 import space.megaworld.streetpass.core.TimeRanges
 import space.megaworld.streetpass.data.db.EncounterRow
 import space.megaworld.streetpass.ui.AppViewModelProvider
 import space.megaworld.streetpass.ui.Format
 import space.megaworld.streetpass.ui.components.EncounterItem
 
-data class HistorySection(val date: LocalDate, val title: String, val rows: List<EncounterRow>)
+data class HistorySection(val date: LocalDate, val rows: List<EncounterRow>)
 
 data class HistoryUiState(
+    val today: LocalDate = LocalDate.now(),
     val sections: List<HistorySection> = emptyList(),
     val loaded: Boolean = false,
 )
@@ -48,14 +51,8 @@ class HistoryViewModel(container: AppContainer) : ViewModel() {
         // Выборка отсортирована по времени убыванию, groupBy сохраняет порядок — дни идут от новых к старым.
         val sections = rows
             .groupBy { TimeRanges.toLocalDate(it.timestamp) }
-            .map { (date, dayRows) ->
-                HistorySection(
-                    date = date,
-                    title = "${Format.dayTitle(date, today)} · ${dayRows.size}",
-                    rows = dayRows,
-                )
-            }
-        HistoryUiState(sections = sections, loaded = true)
+            .map { (date, dayRows) -> HistorySection(date, dayRows) }
+        HistoryUiState(today = today, sections = sections, loaded = true)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
 
     companion object {
@@ -78,9 +75,7 @@ fun HistoryScreen(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "История пуста.\n\nВключите обнаружение на главном экране и держите телефон при " +
-                    "себе. Как только рядом окажется другой пользователь StreetPass с включённым " +
-                    "приложением, встреча появится здесь.",
+                text = stringResource(R.string.history_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -96,7 +91,7 @@ fun HistoryScreen(
         state.sections.forEach { section ->
             item(key = "header-${section.date}") {
                 Text(
-                    text = section.title,
+                    text = stringResource(R.string.history_section, dayTitle(section.date, state.today), section.rows.size),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
@@ -110,4 +105,11 @@ fun HistoryScreen(
             }
         }
     }
+}
+
+@Composable
+private fun dayTitle(date: LocalDate, today: LocalDate): String = when (date) {
+    today -> stringResource(R.string.day_today)
+    today.minusDays(1) -> stringResource(R.string.day_yesterday)
+    else -> Format.date(date)
 }

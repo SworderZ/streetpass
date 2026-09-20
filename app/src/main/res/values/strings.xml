@@ -1,4 +1,198 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">StreetPass</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">Home</string>
+    <string name="tab_history">History</string>
+    <string name="tab_stats">Stats</string>
+    <string name="tab_settings">Settings</string>
+
+    <!-- Home -->
+    <string name="discovery_title">Discovery</string>
+    <string name="discovery_running">Running in the background</string>
+    <string name="discovery_off">Off</string>
+    <string name="status_advertising">Broadcasting</string>
+    <string name="status_scanning">Scanning</string>
+    <string name="last_signal">Last signal: %1$s</string>
+    <string name="none_dash">—</string>
+
+    <string name="perm_title">Permissions needed</string>
+    <string name="perm_text_legacy">To find other devices over Bluetooth, Android versions before 12 require the location permission. The app does not determine or store your location — this is a system requirement for BLE scanning.</string>
+    <string name="perm_text_modern">Broadcasting and scanning over Bluetooth needs the “Nearby devices” permission. Location is not requested.</string>
+    <string name="perm_action">Grant permissions</string>
+
+    <string name="bt_off_title">Bluetooth is off</string>
+    <string name="bt_off_text">Discovery cannot work without Bluetooth. It will resume on its own once you turn it on.</string>
+    <string name="bt_off_action">Open Bluetooth settings</string>
+
+    <string name="ble_error_title">Bluetooth error</string>
+
+    <string name="adv_unsupported_title">Broadcasting unavailable</string>
+    <string name="adv_unsupported_text">This device’s Bluetooth chip cannot do BLE advertising. You will see other users, but they will not see you.</string>
+
+    <string name="notif_denied_title">Notifications blocked</string>
+    <string name="notif_denied_text">Discovery works without them, but the persistent notification with the counter will not be shown.</string>
+    <string name="notif_allow">Allow</string>
+
+    <string name="tile_today_encounters">encounters today</string>
+    <string name="tile_today_people">people today</string>
+    <string name="tile_total_people">unique people</string>
+    <string name="tile_total_encounters">encounters total</string>
+
+    <string name="recent_title">Recent encounters</string>
+    <string name="recent_all">Full history</string>
+    <string name="recent_empty">No encounters yet. Turn discovery on and keep your phone with you — other StreetPass users will show up here.</string>
+
+    <string name="identity_title">How others see you</string>
+    <string name="identity_no_nickname">No nickname set — only the ID is broadcast. You can set one in Settings.</string>
+    <string name="identity_text">The ID is all your phone sends: 8 random bytes not tied to you, your account or your device. Other users count encounters with you by it. It can be changed in Settings.</string>
+
+    <!-- Encounter row -->
+    <string name="first_meeting">First meeting</string>
+    <string name="meeting_number">Meeting #%1$d</string>
+    <string name="rssi_dbm">%1$d dBm</string>
+
+    <!-- History -->
+    <string name="history_empty">History is empty.\n\nTurn discovery on from the Home tab and keep your phone with you. As soon as another StreetPass user with the app running is nearby, the encounter will appear here.</string>
+    <string name="day_today">Today</string>
+    <string name="day_yesterday">Yesterday</string>
+    <string name="history_section">%1$s · %2$d</string>
+
+    <!-- Stats -->
+    <string name="stats_today">Today</string>
+    <string name="stats_week">Last 7 days</string>
+    <string name="stats_all_time">All time</string>
+    <string name="stats_top">Most frequent</string>
+    <string name="stat_encounters">encounters</string>
+    <string name="stat_people">people</string>
+    <string name="row_encounters">Encounters</string>
+    <string name="row_people">Unique people</string>
+    <string name="row_avg">Average encounters per person</string>
+    <string name="top_empty">Nobody to show yet.</string>
+    <string name="top_last">last: %1$s</string>
+
+    <plurals name="encounters_count">
+        <item quantity="one">%d encounter</item>
+        <item quantity="other">%d encounters</item>
+    </plurals>
+    <plurals name="minutes_count">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+
+    <!-- Settings: profile -->
+    <string name="section_profile">Profile</string>
+    <string name="nickname_label">Nickname</string>
+    <string name="nickname_hint">Shown to other users instead of your ID</string>
+    <string name="nickname_bytes">%1$d / %2$d bytes</string>
+    <string name="nickname_save">Save</string>
+    <string name="nickname_warning">The nickname is broadcast in the clear: anyone with a Bluetooth scanner nearby can read it. Leave it empty to stay fully anonymous.</string>
+
+    <!-- Settings: discovery -->
+    <string name="section_discovery">Discovery</string>
+    <string name="sw_advertise_title">Broadcast my ID</string>
+    <string name="sw_advertise_sub">Lets other users count an encounter with you</string>
+    <string name="sw_scan_title">Look for others</string>
+    <string name="sw_scan_sub">Scan the air and record encounters</string>
+    <string name="sw_autostart_title">Start after reboot</string>
+    <string name="sw_autostart_sub">If discovery was on, bring it back up when the system starts</string>
+
+    <!-- Settings: power -->
+    <string name="section_power">Power</string>
+    <string name="power_saver_title">Saver</string>
+    <string name="power_saver_desc">8 seconds of scanning every 2 minutes. Longest battery life, but passing encounters may be missed.</string>
+    <string name="power_balanced_title">Balanced</string>
+    <string name="power_balanced_desc">10 seconds of scanning every minute. A sensible compromise for everyday carry.</string>
+    <string name="power_max_title">Maximum</string>
+    <string name="power_max_desc">Continuous scanning. Misses nothing, noticeably drains the battery.</string>
+
+    <!-- Settings: cooldown -->
+    <string name="section_cooldown">Duplicate protection</string>
+    <string name="cooldown_text">A repeat encounter with the same person counts no sooner than %1$s later</string>
+    <string name="cooldown_help">During that time the person may be nearby and the signal received, but no new encounter is added to the history. Range: %1$d–%2$d minutes.</string>
+
+    <!-- Settings: RSSI -->
+    <string name="section_rssi">Signal threshold</string>
+    <string name="rssi_text">No weaker than %1$d dBm — %2$s</string>
+    <string name="rssi_hint_touch">only up close, within half a metre</string>
+    <string name="rssi_hint_near">roughly 1–2 metres</string>
+    <string name="rssi_hint_room">roughly 3–6 metres, same room</string>
+    <string name="rssi_hint_far">about 10 metres, next room</string>
+    <string name="rssi_hint_max">maximum range, including neighbours behind a wall</string>
+    <string name="rssi_help">Packets weaker than the threshold are dropped, so people behind a wall or a floor below are not counted. The closer to −40, the closer the person has to be. The distance estimate is rough and depends on the phone.</string>
+
+    <!-- Settings: privacy -->
+    <string name="section_privacy">Privacy</string>
+    <string name="privacy_text">What is collected: the random 8-byte ID of each device met, its nickname if it broadcasts one, the time of the encounter and, if enabled below, the signal strength.\n\nWhat is not collected: location, MAC addresses, device names, contacts, anything about you. Everything stays on this phone: the app only goes online to check for updates when you ask it to, and it is excluded from cloud backup.</string>
+    <string name="sw_store_rssi_title">Store signal strength</string>
+    <string name="sw_store_rssi_sub">RSSI in the history helps judge how close the person was</string>
+    <string name="your_id">Your ID</string>
+    <string name="btn_change_id">Change ID</string>
+    <string name="btn_clear_history">Clear history</string>
+    <string name="dialog_regen_title">Change ID?</string>
+    <string name="dialog_regen_text">Other users will start seeing you as a new person: at the next encounter they will record a “first meeting”. Your own history is unaffected.</string>
+    <string name="dialog_regen_confirm">Change</string>
+    <string name="dialog_clear_title">Clear history?</string>
+    <string name="dialog_clear_text">All encounters and statistics will be deleted permanently. Discovery keeps running.</string>
+    <string name="dialog_clear_confirm">Clear</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Settings: updates -->
+    <string name="section_updates">Updates</string>
+    <string name="update_installed">Installed version %1$s</string>
+    <string name="update_idle_text">Checking is the only reason the app needs internet: a single request to GitHub when you tap the button. It contains nothing about your encounters or your ID.</string>
+    <string name="update_check">Check for updates</string>
+    <string name="update_checking">Asking GitHub…</string>
+    <string name="update_up_to_date">You have the latest version (on GitHub: %1$s).</string>
+    <string name="update_check_again">Check again</string>
+    <string name="update_available">Version %1$s available</string>
+    <string name="update_no_apk">No APK is attached to this release — it can only be downloaded manually from the release page.</string>
+    <string name="update_download">Download and install</string>
+    <string name="update_open_github">Open on GitHub</string>
+    <string name="update_downloading">Downloading %1$s…</string>
+    <string name="update_downloaded_text">The file has been downloaded and the installer should open. If it did not, tap the download notification.</string>
+    <string name="update_redownload">Download again</string>
+    <string name="update_retry_download">Retry download</string>
+    <string name="retry">Retry</string>
+    <string name="close">Close</string>
+
+    <string name="err_no_releases">There are no releases on GitHub yet</string>
+    <string name="err_github_unreachable">Could not reach GitHub: %1$s</string>
+    <string name="err_no_network">no network</string>
+    <string name="err_bad_response">GitHub returned an unexpected response</string>
+    <string name="err_download_manager">The download manager is unavailable</string>
+    <string name="err_bad_url">Invalid APK link</string>
+    <string name="err_download_failed">Download failed (code %1$d)</string>
+    <string name="err_file_missing">The downloaded file was not found</string>
+    <string name="err_no_installer">No system package installer found</string>
+
+    <!-- Service / notification -->
+    <string name="notif_channel_name">Discovery</string>
+    <string name="notif_channel_desc">Persistent notification while discovery is running</string>
+    <string name="notif_text">Encounters today: %1$d</string>
+    <string name="notif_stop">Turn off</string>
+    <string name="err_bt_off_service">Bluetooth is off. Turn it on — discovery will resume automatically.</string>
+    <string name="err_fgs_permission">Could not start the background service: Bluetooth permissions are missing</string>
+    <string name="err_fgs_not_allowed">The system refused to start the background service: %1$s</string>
+
+    <!-- BLE -->
+    <string name="err_bt_off">Bluetooth is off</string>
+    <string name="err_bt_unavailable">Bluetooth unavailable: %1$s</string>
+    <string name="err_adv_permission">No permission for BLE advertising</string>
+    <string name="err_adv_too_large">Advertising packet is too large</string>
+    <string name="err_adv_too_many">Too many active advertisers on this device</string>
+    <string name="err_adv_already_started">Advertising is already running</string>
+    <string name="err_adv_internal">Internal Bluetooth stack error while starting advertising</string>
+    <string name="err_adv_unsupported">This device does not support BLE advertising</string>
+    <string name="err_adv_generic">BLE advertising error (%1$d)</string>
+    <string name="err_scan_permission">No permission for BLE scanning</string>
+    <string name="err_scanner_unavailable">BLE scanner is unavailable</string>
+    <string name="err_scan_already_started">Scanning is already running</string>
+    <string name="err_scan_registration">Could not register the scanner with the Bluetooth stack. Turning Bluetooth off and on usually helps</string>
+    <string name="err_scan_internal">Internal Bluetooth stack error while scanning</string>
+    <string name="err_scan_unsupported">This device does not support the required scan mode</string>
+    <string name="err_scan_hw_resources">The Bluetooth controller ran out of scanning resources</string>
+    <string name="err_scan_too_frequent">Scanning restarted too often; the system is temporarily blocking it</string>
+    <string name="err_scan_generic">BLE scanning error (%1$d)</string>
 </resources>

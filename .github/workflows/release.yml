@@ -35,11 +35,18 @@ jobs:
           keyPassword=$KEY_PASSWORD
           EOF
 
-      - name: Check and build
+      - name: Lint
         run: |
           chmod +x gradlew
+          ./gradlew lint
+
+      - name: Unit tests
+        run: ./gradlew test
+
+      - name: Build signed release
+        run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          ./gradlew lint test assembleRelease \
+          ./gradlew assembleRelease \
             -Pstreetpass.versionName="$VERSION" \
             -Pstreetpass.versionCode="$GITHUB_RUN_NUMBER"
           cp app/build/outputs/apk/release/app-release.apk "streetpass-${GITHUB_REF_NAME}.apk"

@@ -45,6 +45,7 @@ class EncounterRepository(
         cooldownMinutes: Int,
         minRssi: Int,
         storeRssi: Boolean,
+        nickname: String? = null,
     ): SightingResult {
         if (rssi < minRssi) return SightingResult.TooWeak
         val storedRssi = if (storeRssi) rssi else RSSI_NOT_STORED
@@ -61,6 +62,7 @@ class EncounterRepository(
                         encounterCount = 1,
                         lastRssi = storedRssi,
                         bestRssi = storedRssi,
+                        nickname = nickname,
                     ),
                 )
                 encounters.insert(
@@ -83,6 +85,8 @@ class EncounterRepository(
                     bestRssi = bestRssi,
                     lastEncounterAt = if (counts) now else peer.lastEncounterAt,
                     encounterCount = if (counts) peer.encounterCount + 1 else peer.encounterCount,
+                    // Пакет без scan-response ника не несёт — старое значение не затираем.
+                    nickname = nickname ?: peer.nickname,
                 ),
             )
             if (counts) {

@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -45,6 +46,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import space.megaworld.streetpass.AppContainer
+import space.megaworld.streetpass.R
 import space.megaworld.streetpass.ble.DiscoveryService
 import space.megaworld.streetpass.ble.DiscoveryState
 import space.megaworld.streetpass.core.Hex
@@ -70,6 +72,7 @@ data class HomeUiState(
     val totalEncounters: Int = 0,
     val recent: List<EncounterRow> = emptyList(),
     val peerId: String = "",
+    val nickname: String = "",
 )
 
 class HomeViewModel(
@@ -85,6 +88,8 @@ class HomeViewModel(
 
     private class Counts(val todayEncounters: Int, val todayPeople: Int, val totalPeers: Int, val totalEncounters: Int)
 
+    private class Identity(val peerId: String, val nickname: String)
+
     private val environment = MutableStateFlow(readEnvironment())
 
     private val counts = combine(
@@ -96,13 +101,18 @@ class HomeViewModel(
         Counts(todayEncounters, todayPeople, totalPeers, totalEncounters)
     }
 
+    private val identity = combine(
+        container.identityRepository.idHex,
+        container.identityRepository.nickname,
+    ) { id, nickname -> Identity(id, nickname) }
+
     val uiState: StateFlow<HomeUiState> = combine(
         counts,
         container.encounterRepository.recent(RECENT_LIMIT),
-        container.identityRepository.idHex,
+        identity,
         container.discoveryState,
         environment,
-    ) { counts, recent, peerId, discovery, env ->
+    ) { counts, recent, identity, discovery, env ->
         HomeUiState(
             discovery = discovery,
             permissionsGranted = env.permissionsGranted,
@@ -115,7 +125,8 @@ class HomeViewModel(
             totalPeers = counts.totalPeers,
             totalEncounters = counts.totalEncounters,
             recent = recent,
-            peerId = peerId,
+            peerId = identity.peerId,
+            nickname = identity.nickname,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
@@ -199,16 +210,11 @@ fun HomeScreen(
         if (!state.permissionsGranted) {
             item {
                 InfoCard(
-                    title = "Нужны разрешения",
-                    text = if (Permissions.needsLocationExplanation) {
-                        "Для поиска других устройств по Bluetooth Android до 12-й версии требует " +
-                            "разрешение на геолокацию. Приложение не определяет и не сохраняет " +
-                            "местоположение — это требование системы к BLE-сканированию."
-                    } else {
-                        "Для передачи и поиска по Bluetooth нужны разрешения «Устройства поблизости». " +
-                            "Геолокация не запрашивается."
-                    },
-                    actionLabel = "Выдать разрешения",
+                    title = stringResource(R.string.perm_title),
+                    text = stringResource(
+                        if (Permissions.needsLocationExplanation) R.string.perm_text_legacy else R.string.perm_text_modern,
+                    ),
+                    actionLabel = stringResource(R.string.perm_action),
                     onAction = { permissionLauncher.launch(Permissions.toRequest()) },
                 )
             }
@@ -217,9 +223,9 @@ fun HomeScreen(
         if (state.permissionsGranted && !state.bluetoothOn) {
             item {
                 InfoCard(
-                    title = "Bluetooth выключен",
-                    text = "Без Bluetooth обнаружение не работает. После включения оно продолжится само.",
-                    actionLabel = "Открыть настройки Bluetooth",
+                    title = stringResource(R.string.bt_off_title),
+                    text = stringResource(R.string.bt_off_text),
+                    actionLabel = stringResource(R.string.bt_off_action),
                     onAction = ::openBluetoothSettings,
                 )
             }
@@ -228,16 +234,15 @@ fun HomeScreen(
         val error = state.discovery.error
         if (error != null && state.bluetoothOn && state.discovery.running) {
             item {
-                InfoCard(title = "Ошибка Bluetooth", text = error, tone = InfoTone.ERROR)
+                InfoCard(title = stringResource(R.string.ble_error_title), text = error, tone = InfoTone.ERROR)
             }
         }
 
         if (!state.discovery.advertisingSupported) {
             item {
                 InfoCard(
-                    title = "Передача недоступна",
-                    text = "Bluetooth-чип этого устройства не умеет BLE-рекламу. Вы будете видеть " +
-                        "других пользователей, но они вас — нет.",
+                    title = stringResource(R.string.adv_unsupported_title),
+                    text = stringResource(R.string.adv_unsupported_text),
                     tone = InfoTone.NEUTRAL,
                 )
             }
@@ -246,11 +251,10 @@ fun HomeScreen(
         if (state.permissionsGranted && !state.notificationsAllowed) {
             item {
                 InfoCard(
-                    title = "Уведомления запрещены",
-                    text = "Обнаружение работает и без них, но постоянное уведомление со счётчиком " +
-                        "показываться не будет.",
+                    title = stringResource(R.string.notif_denied_title),
+                    text = stringResource(R.string.notif_denied_text),
                     tone = InfoTone.NEUTRAL,
-                    actionLabel = "Разрешить",
+                    actionLabel = stringResource(R.string.notif_allow),
                     onAction = { permissionLauncher.launch(Permissions.optional().toTypedArray()) },
                 )
             }
@@ -259,12 +263,12 @@ fun HomeScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatTile("встреч сегодня", state.todayEncounters.toString(), Modifier.weight(1f))
-                    StatTile("людей сегодня", state.todayPeople.toString(), Modifier.weight(1f))
+                    StatTile(stringResource(R.string.tile_today_encounters), state.todayEncounters.toString(), Modifier.weight(1f))
+                    StatTile(stringResource(R.string.tile_today_people), state.todayPeople.toString(), Modifier.weight(1f))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatTile("уникальных всего", state.totalPeers.toString(), Modifier.weight(1f))
-                    StatTile("встреч всего", state.totalEncounters.toString(), Modifier.weight(1f))
+                    StatTile(stringResource(R.string.tile_total_people), state.totalPeers.toString(), Modifier.weight(1f))
+                    StatTile(stringResource(R.string.tile_total_encounters), state.totalEncounters.toString(), Modifier.weight(1f))
                 }
             }
         }
@@ -275,16 +279,15 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                SectionTitle("Последние встречи")
-                TextButton(onClick = onOpenHistory) { Text("Вся история") }
+                SectionTitle(stringResource(R.string.recent_title))
+                TextButton(onClick = onOpenHistory) { Text(stringResource(R.string.recent_all)) }
             }
         }
 
         if (state.recent.isEmpty()) {
             item {
                 Text(
-                    text = "Пока ни одной встречи. Включите обнаружение и носите телефон с собой — " +
-                        "другие пользователи StreetPass появятся здесь.",
+                    text = stringResource(R.string.recent_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -298,7 +301,7 @@ fun HomeScreen(
             }
         }
 
-        item { IdentityCard(peerId = state.peerId) }
+        item { IdentityCard(peerId = state.peerId, nickname = state.nickname) }
     }
 }
 
@@ -316,9 +319,9 @@ private fun DiscoveryCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text("Обнаружение", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.discovery_title), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        text = if (discovery.running) "Работает в фоне" else "Выключено",
+                        text = stringResource(if (discovery.running) R.string.discovery_running else R.string.discovery_off),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -327,13 +330,15 @@ private fun DiscoveryCard(
             }
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                StatusDot(active = discovery.advertising, label = "Передача")
-                StatusDot(active = discovery.scanning, label = "Сканирование")
+                StatusDot(active = discovery.advertising, label = stringResource(R.string.status_advertising))
+                StatusDot(active = discovery.scanning, label = stringResource(R.string.status_scanning))
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Последний сигнал: " +
-                    (discovery.lastSightingAt?.let { Format.timeWithSeconds(it) } ?: "—"),
+                text = stringResource(
+                    R.string.last_signal,
+                    discovery.lastSightingAt?.let { Format.timeWithSeconds(it) } ?: stringResource(R.string.none_dash),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -342,21 +347,31 @@ private fun DiscoveryCard(
 }
 
 @Composable
-private fun IdentityCard(peerId: String) {
+private fun IdentityCard(peerId: String, nickname: String) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Ваш анонимный ID", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.identity_title), style = MaterialTheme.typography.titleSmall)
             Spacer(modifier = Modifier.height(8.dp))
+            if (nickname.isNotEmpty()) {
+                Text(text = nickname, style = MaterialTheme.typography.titleLarge)
+                Spacer(modifier = Modifier.height(4.dp))
+            }
             Text(
                 text = if (peerId.isEmpty()) "…" else Hex.grouped(peerId),
-                style = MaterialTheme.typography.titleLarge,
+                style = if (nickname.isEmpty()) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyMedium,
                 fontFamily = FontFamily.Monospace,
             )
             Spacer(modifier = Modifier.height(8.dp))
+            if (nickname.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.identity_no_nickname),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
             Text(
-                text = "Это всё, что телефон передаёт в эфир: 8 случайных байт, никак не связанных " +
-                    "с вами, аккаунтом или устройством. По ним другие пользователи считают встречу " +
-                    "с вами. Сменить ID можно в настройках.",
+                text = stringResource(R.string.identity_text),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

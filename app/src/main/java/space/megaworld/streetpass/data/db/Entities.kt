@@ -14,6 +14,8 @@ data class PeerEntity(
     val encounterCount: Int,
     val lastRssi: Int,
     val bestRssi: Int,
+    /** Последний ник, который peer передавал в эфир; null — ник не задан или не пойман. */
+    val nickname: String? = null,
 )
 
 @Entity(
@@ -36,10 +38,11 @@ data class EncounterEntity(
     val firstMeeting: Boolean,
 )
 
-/** Строка истории: встреча плюс её порядковый номер у данного peer. */
+/** Строка истории: встреча плюс её порядковый номер у данного peer и его текущий ник. */
 data class EncounterRow(
     val id: Long,
     val peerId: String,
+    val nickname: String?,
     val timestamp: Long,
     val rssi: Int,
     val firstMeeting: Boolean,

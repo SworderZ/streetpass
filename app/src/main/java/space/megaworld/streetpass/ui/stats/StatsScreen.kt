@@ -18,7 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -29,13 +30,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import space.megaworld.streetpass.AppContainer
-import space.megaworld.streetpass.core.Hex
+import space.megaworld.streetpass.R
 import space.megaworld.streetpass.data.DailyCount
 import space.megaworld.streetpass.data.db.PeerEntity
 import space.megaworld.streetpass.ui.AppViewModelProvider
 import space.megaworld.streetpass.ui.Format
 import space.megaworld.streetpass.ui.components.BarColumn
 import space.megaworld.streetpass.ui.components.LabeledRow
+import space.megaworld.streetpass.ui.components.PeerName
 import space.megaworld.streetpass.ui.components.SectionTitle
 import space.megaworld.streetpass.ui.components.StatTile
 
@@ -50,7 +52,7 @@ data class StatsUiState(
     val topPeers: List<PeerEntity> = emptyList(),
 ) {
     val averagePerPerson: String
-        get() = if (totalPeers == 0) "—" else String.format(Format.locale, "%.1f", totalEncounters.toFloat() / totalPeers)
+        get() = if (totalPeers == 0) "—" else Format.decimal(totalEncounters.toFloat() / totalPeers)
 }
 
 class StatsViewModel(container: AppContainer) : ViewModel() {
@@ -103,39 +105,39 @@ fun StatsScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            SectionTitle("Сегодня")
+            SectionTitle(stringResource(R.string.stats_today))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatTile("встреч", state.todayEncounters.toString(), Modifier.weight(1f))
-                StatTile("людей", state.todayPeople.toString(), Modifier.weight(1f))
+                StatTile(stringResource(R.string.stat_encounters), state.todayEncounters.toString(), Modifier.weight(1f))
+                StatTile(stringResource(R.string.stat_people), state.todayPeople.toString(), Modifier.weight(1f))
             }
         }
 
         item {
-            SectionTitle("Последние 7 дней")
+            SectionTitle(stringResource(R.string.stats_week))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatTile("встреч", state.weekEncounters.toString(), Modifier.weight(1f))
-                StatTile("людей", state.weekPeople.toString(), Modifier.weight(1f))
+                StatTile(stringResource(R.string.stat_encounters), state.weekEncounters.toString(), Modifier.weight(1f))
+                StatTile(stringResource(R.string.stat_people), state.weekPeople.toString(), Modifier.weight(1f))
             }
             Spacer(modifier = Modifier.height(12.dp))
             WeekChart(daily = state.weekDaily)
         }
 
         item {
-            SectionTitle("За всё время")
+            SectionTitle(stringResource(R.string.stats_all_time))
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    LabeledRow("Встреч", state.totalEncounters.toString())
-                    LabeledRow("Уникальных людей", state.totalPeers.toString())
-                    LabeledRow("Среднее встреч на человека", state.averagePerPerson)
+                    LabeledRow(stringResource(R.string.row_encounters), state.totalEncounters.toString())
+                    LabeledRow(stringResource(R.string.row_people), state.totalPeers.toString())
+                    LabeledRow(stringResource(R.string.row_avg), state.averagePerPerson)
                 }
             }
         }
 
         item {
-            SectionTitle("Чаще всего встречаются")
+            SectionTitle(stringResource(R.string.stats_top))
             if (state.topPeers.isEmpty()) {
                 Text(
-                    text = "Пока некого показать.",
+                    text = stringResource(R.string.top_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -186,20 +188,16 @@ private fun TopPeerRow(position: Int, peer: PeerEntity) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
+            PeerName(nickname = peer.nickname, peerId = peer.peerId, prefix = "$position. ")
             Text(
-                text = "$position. ${Hex.short(peer.peerId)}",
-                style = MaterialTheme.typography.bodyLarge,
-                fontFamily = FontFamily.Monospace,
-            )
-            Text(
-                text = "последняя: ${Format.dateTime(peer.lastEncounterAt)}",
+                text = stringResource(R.string.top_last, Format.dateTime(peer.lastEncounterAt)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
-            text = Format.encounters(peer.encounterCount),
+            text = pluralStringResource(R.plurals.encounters_count, peer.encounterCount, peer.encounterCount),
             style = MaterialTheme.typography.bodyMedium,
         )
     }
