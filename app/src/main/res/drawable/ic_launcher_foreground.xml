@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Две точки-«человека» и сигнальные дуги между ними -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M28,62 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M62,62 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M42,48 Q54,36 66,48" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M46,40 Q54,32 62,40" />
+</vector>
