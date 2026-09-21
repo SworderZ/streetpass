@@ -15,7 +15,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import space.megaworld.streetpass.core.FriendInvite
 import space.megaworld.streetpass.data.EncounterRepository
+import space.megaworld.streetpass.data.SightingResult
 import space.megaworld.streetpass.data.db.AppDatabase
 
 @RunWith(RobolectricTestRunner::class)
@@ -135,6 +137,47 @@ class AchievementRepositoryTest {
         assertTrue(achievements.progress.first().first { it.achievement.id == "people_5" }.unlocked)
         // Друг остался, но люди из статистики ушли: прогресс считается заново по базе.
         assertEquals(1, achievements.metrics.first().people)
+    }
+
+    @Test
+    fun friendFromInviteAppearsWithoutEncountersAndFirstMeetingIsRecordedLater() = runBlocking {
+        val invite = FriendInvite.Invite(peerId = peer(7), nickname = "Alice", publicKey = ByteArray(33))
+
+        encounters.addFriend(invite, t0)
+
+        val friend = db.peerDao().getById(peer(7))!!
+        assertTrue(friend.isFriend)
+        assertEquals("Alice", friend.nickname)
+        assertEquals(0, friend.encounterCount)
+        assertEquals(1, achievements.check(t0).count { it.id == "friends_1" })
+
+        val result = meet(peer(7), t0 + hour)
+        assertEquals(SightingResult.Registered(peer(7), firstMeeting = true), result)
+        assertEquals(1, db.peerDao().getById(peer(7))!!.encounterCount)
+    }
+
+    @Test
+    fun inviteForKnownPeerKeepsBroadcastNicknameAndCounters() = runBlocking {
+        meet(peer(0), t0)
+        db.peerDao().upsert(db.peerDao().getById(peer(0))!!.copy(nickname = "FromAir"))
+
+        encounters.addFriend(FriendInvite.Invite(peer(0), "FromInvite", ByteArray(33)), t0 + 1)
+
+        val friend = db.peerDao().getById(peer(0))!!
+        assertTrue(friend.isFriend)
+        assertEquals("FromAir", friend.nickname)
+        assertEquals(1, friend.encounterCount)
+    }
+
+    @Test
+    fun firstMeetingAfterClearHistoryIsFirstAgain() = runBlocking {
+        meet(peer(0), t0)
+        encounters.setFriend(peer(0), friend = true, now = t0)
+        encounters.clearAll()
+
+        val result = meet(peer(0), t0 + hour)
+
+        assertEquals(SightingResult.Registered(peer(0), firstMeeting = true), result)
     }
 
     @Test

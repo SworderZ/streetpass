@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import space.megaworld.streetpass.ble.DiscoveryState
 import space.megaworld.streetpass.data.EncounterRepository
+import space.megaworld.streetpass.core.FriendInvite
 import space.megaworld.streetpass.data.achievements.AchievementRepository
 import space.megaworld.streetpass.data.appDataStore
 import space.megaworld.streetpass.data.db.AppDatabase
@@ -56,4 +57,17 @@ class AppContainer(context: Context) {
 
     /** Состояние сервиса обнаружения; UI читает его напрямую, без bind к сервису. */
     val discoveryState = MutableStateFlow(DiscoveryState())
+
+    /** Приглашение, пришедшее через ссылку или «Поделиться»; UI показывает подтверждение и сбрасывает. */
+    val pendingInvite = MutableStateFlow<PendingInvite?>(null)
+
+    /** Страница проекта — сюда ведут ссылки-приглашения, здесь же лежат релизы. */
+    val projectUrl: String = "https://github.com/${BuildConfig.GITHUB_REPO}"
+}
+
+sealed interface PendingInvite {
+    data class Valid(val invite: FriendInvite.Invite) : PendingInvite
+
+    /** Текст пришёл, но приглашения в нём нет или подпись не сходится. */
+    data object Invalid : PendingInvite
 }

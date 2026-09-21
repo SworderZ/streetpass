@@ -193,6 +193,32 @@ connection, which the protocol deliberately does not have. The display name is
 (friend toggle, alias) opens from any encounter row, the top-5 list and the
 friends list.
 
+**Invites.** A friend can also be added without ever having met: the peer
+dialog is not needed, the invite carries the identity. `FriendInvite` payload:
+
+```
+version(1) | public key, compressed(33) | nickname length(1) | nickname UTF-8(0..24) | ECDSA r||s (64)
+```
+
+signed with the domain `"StreetPass-invite-v1"` (different from the ID proof
+domain, so the two signatures are not interchangeable). No timestamp: an invite
+is meant to be stored and forwarded. It travels as base64url in
+`https://github.com/<repo>#invite=<payload>` — without the app the link lands
+on the project page, with the app the system can open it in the app. The QR
+code (ZXing) contains the same link. The receiver verifies the signature,
+derives the ID from the key and creates the peer with zero encounters (or marks
+an existing one); the first real encounter is recorded as "first meeting"
+(`encounterCount == 0`).
+
+Ways in: the in-app scanner (CameraX + ZXing, `CAMERA` permission requested
+only on that screen; the domain is not ours, so there is no verified App Link
+and on Android 12+ the link opens in the browser unless the user allows it in
+the app's settings), the `ACTION_VIEW` intent filter for the project URL, the
+`ACTION_SEND text/plain` filter ("Share → StreetPass" from a messenger), and a
+plain text field to paste the link. All four end in the same confirmation
+dialog (`AppContainer.pendingInvite`), shown over any tab. Own invite is
+rejected.
+
 **Achievements** are defined in code (`Achievement.ALL`; ids are stored in the
 database, so never rename them) and evaluated from the accumulated database,
 not from events — `AchievementRepository.check(now)` is idempotent and is called
@@ -294,6 +320,7 @@ continuously; it costs almost nothing.
 | ≤ 11 | `BLUETOOTH`, `BLUETOOTH_ADMIN` (install-time), `ACCESS_FINE_LOCATION` |
 | 12+ | `BLUETOOTH_SCAN` with `neverForLocation`, `BLUETOOTH_ADVERTISE` |
 | 13+ | additionally `POST_NOTIFICATIONS` |
+| any | `CAMERA` — only for the QR invite scanner, requested on that screen |
 
 Plus `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE`,
 `RECEIVE_BOOT_COMPLETED`.
@@ -338,7 +365,9 @@ explaining what to do.
   Box, do not pull in a chart library).
 - All time: encounters, unique people, average encounters per person.
 - Top 5 most frequent peers.
-- Friends: list with encounter counts; tap opens the peer dialog.
+- Friends: "My invite" (QR + share link) and "Add friend" (scanner + paste
+  field) buttons, then the list with encounter counts; tap opens the peer
+  dialog.
 - Achievements: a two-column grid of tiles with icon, title, progress bar and
   "N / M" or the unlock date.
 
@@ -376,7 +405,7 @@ not debug ones.
 ## 10. Project structure
 
 ```
-core/          BleConstants, Hex, TimeRanges, Streaks, IdentityProof (ID signature format and verification)
+core/          BleConstants, Hex, TimeRanges, Streaks, IdentityProof (ID signature), FriendInvite (signed invite)
 data/db/       Entities, Daos, AppDatabase
 data/settings/ SettingsRepository, AppSettings, PowerMode
 data/identity/ IdentityRepository, IdentityKeys (key in AndroidKeyStore / software)
@@ -388,6 +417,7 @@ ui/            AppRoot, AppViewModels, Permissions
 ui/theme/      Theme
 ui/components/ StatTile, StatusDot, LabeledRow, BarColumn, SectionTitle, AchievementTile, EncounterItem
 ui/peer/       PeerDialog + PeerViewModel (opened from several screens)
+ui/friends/    FriendInvites (my QR, scanner dialog, confirmation) + QrScanner (CameraX)
 ui/home|history|stats|settings/   screen + its ViewModel in one file
 ```
 
@@ -419,6 +449,10 @@ ui/home|history|stats|settings/   screen + its ViewModel in one file
 15. Marking a peer as a friend unlocks "1 friend" immediately and shows the
     "New achievement" card on Home; clearing the history keeps the friend and
     the achievement.
+16. Phone B scans phone A's "My invite" QR: A appears in B's friends with zero
+    encounters; the next real encounter is recorded as "First meeting". The
+    same link pasted into "Add friend" or shared from a messenger to StreetPass
+    gives the same confirmation dialog; a modified link is rejected.
 
 ## 12. Work order
 

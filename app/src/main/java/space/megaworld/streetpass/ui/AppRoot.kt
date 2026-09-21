@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import space.megaworld.streetpass.R
+import space.megaworld.streetpass.ui.friends.InviteConfirmDialog
 import space.megaworld.streetpass.ui.history.HistoryScreen
 import space.megaworld.streetpass.ui.home.HomeScreen
 import space.megaworld.streetpass.ui.settings.SettingsScreen
@@ -38,6 +39,9 @@ enum class AppTab(@StringRes val titleRes: Int, val icon: ImageVector) {
 @Composable
 fun AppRoot() {
     var tab by rememberSaveable { mutableStateOf(AppTab.HOME) }
+
+    // Приглашение из ссылки или «Поделиться» может прийти на любой вкладке.
+    InviteConfirmDialog()
 
     Scaffold(
         bottomBar = {

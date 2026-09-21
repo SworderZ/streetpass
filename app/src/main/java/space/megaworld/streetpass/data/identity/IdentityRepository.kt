@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import space.megaworld.streetpass.core.FriendInvite
 import space.megaworld.streetpass.core.Hex
 import space.megaworld.streetpass.core.IdentityProof
 import space.megaworld.streetpass.core.Nicknames
@@ -66,6 +67,22 @@ class IdentityRepository(
                 // но подписывать отказывается. Единственный выход — новый ключ, то есть новый ID.
                 Log.w(TAG, "identity key unusable, recreating")
                 signLocked(recreateLocked(), nowMillis)
+            }
+        }
+    }
+
+    /** Подписанное приглашение в друзья (полезная нагрузка ссылки); null — подписать нечем. */
+    suspend fun invitePayload(): String? = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            val pair = ensureKeyLocked()
+            try {
+                FriendInvite.create(pair.private, pair.public, nickname.first())
+            } catch (e: GeneralSecurityException) {
+                Log.w(TAG, "invite signing failed: ${e.message}")
+                null
+            } catch (e: RuntimeException) {
+                Log.w(TAG, "invite signing failed: ${e.message}")
+                null
             }
         }
     }

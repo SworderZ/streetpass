@@ -77,6 +77,11 @@ old ones — keep a backup.
   runs in cycles (power profiles in the settings).
 - Tap any person in the history to mark them as a friend or give them a name. Both are
   local marks — the other person is not notified and nothing goes over the air.
+- Friends can also be added by invite (Stats → Friends): "My invite" shows a QR code
+  and a shareable link signed with your key (it carries your ID and nickname, nothing
+  else); "Add friend" scans a QR code or accepts a pasted link. A link shared from a
+  messenger can be sent to StreetPass via "Share". Camera access is asked for only on
+  the scanner screen.
 - Achievements (Stats tab) are earned for people met (5 … 100), encounters (10 … 500),
   friends (1 … 10), meeting the same friend many times (10 … 100) and streaks of
   consecutive days (7, 30). They survive clearing the history.
@@ -136,5 +141,7 @@ Per-manufacturer instructions: dontkillmyapp.com.
   request contains nothing about encounters, your ID or your device. There are no other
   network calls in the code — this is easy to verify, all networking lives in
   `data/update/UpdateRepository.kt`.
+- The `CAMERA` permission is used only by the QR scanner for friend invites, and only
+  while that screen is open; frames are decoded on the phone and never stored.
 - `allowBackup="false"`: the database does not go into cloud backup.
 - The ID can be changed at any time in the settings; the history can be erased.

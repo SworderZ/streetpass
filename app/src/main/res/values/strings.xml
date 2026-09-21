@@ -94,7 +94,28 @@
 
     <!-- Friends -->
     <string name="section_friends">Friends</string>
-    <string name="friends_empty">No friends yet. Tap a person in the history or in the list above to mark them as a friend.</string>
+    <string name="friends_empty">No friends yet. Tap a person in the history or in the list above to mark them as a friend, or add one by QR code or invite link.</string>
+    <string name="friends_my_invite">My invite</string>
+    <string name="friends_add">Add friend</string>
+
+    <!-- Invites -->
+    <string name="invite_title">Invite a friend</string>
+    <string name="invite_qr_description">QR code with your invite link</string>
+    <string name="invite_text">Let a friend scan this code in StreetPass, or send them the link. The invite contains your ID and nickname, signed with your key — nothing else. Anyone who has it can add you as a friend on their phone.</string>
+    <string name="invite_share">Share link</string>
+    <string name="invite_share_text">Add me as a friend in StreetPass: %1$s</string>
+    <string name="add_friend_title">Add friend</string>
+    <string name="add_friend_scan_hint">Point the camera at a friend’s QR code, or paste an invite link below.</string>
+    <string name="add_friend_paste_hint">Paste the invite link below.</string>
+    <string name="add_friend_camera_denied">No camera access. You can still add a friend by pasting the invite link.</string>
+    <string name="add_friend_allow_camera">Allow camera</string>
+    <string name="add_friend_link_label">Invite link</string>
+    <string name="add_friend_submit">Add</string>
+    <string name="add_friend_link_invalid">This is not a valid StreetPass invite: the link is incomplete or its signature does not match.</string>
+    <string name="confirm_invite_title">Add as friend?</string>
+    <string name="confirm_invite_text">They will be marked as a friend on this phone only. Encounters with them will be recorded once your phones meet.</string>
+    <string name="confirm_invite_self">This is your own invite.</string>
+    <string name="confirm_invite_add">Add</string>
     <string name="friend_since">friend since %1$s</string>
 
     <!-- Achievements -->

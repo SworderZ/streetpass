@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,6 +48,8 @@ import space.megaworld.streetpass.ui.components.LabeledRow
 import space.megaworld.streetpass.ui.components.PeerName
 import space.megaworld.streetpass.ui.components.SectionTitle
 import space.megaworld.streetpass.ui.components.StatTile
+import space.megaworld.streetpass.ui.friends.AddFriendDialog
+import space.megaworld.streetpass.ui.friends.MyInviteDialog
 import space.megaworld.streetpass.ui.peer.PeerDialog
 
 data class StatsUiState(
@@ -119,10 +122,14 @@ fun StatsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedPeer by remember { mutableStateOf<String?>(null) }
+    var showMyInvite by remember { mutableStateOf(false) }
+    var showAddFriend by remember { mutableStateOf(false) }
 
     selectedPeer?.let { peerId ->
         PeerDialog(peerId = peerId, onDismiss = { selectedPeer = null })
     }
+    if (showMyInvite) MyInviteDialog(onDismiss = { showMyInvite = false })
+    if (showAddFriend) AddFriendDialog(onDismiss = { showAddFriend = false })
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -180,6 +187,19 @@ fun StatsScreen(
 
         item {
             SectionTitle(stringResource(R.string.section_friends))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                OutlinedButton(onClick = { showMyInvite = true }, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.friends_my_invite))
+                }
+                OutlinedButton(onClick = { showAddFriend = true }, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.friends_add))
+                }
+            }
             if (state.friends.isEmpty()) {
                 Text(
                     text = stringResource(R.string.friends_empty),

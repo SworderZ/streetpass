@@ -5,6 +5,10 @@
     <uses-feature
         android:name="android.hardware.bluetooth_le"
         android:required="true" />
+    <!-- Камера — только для сканера QR-приглашений; без неё приглашение можно вставить ссылкой. -->
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
 
     <!-- Android ≤ 11: install-time разрешения Bluetooth и вынужденная геолокация —
          без неё старая система не отдаёт результаты BLE-сканирования.
@@ -38,6 +42,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- Сканер QR-приглашений; запрашивается в рантайме только на экране сканера. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <application
         android:name=".StreetPassApp"
         android:allowBackup="false"
@@ -55,6 +62,25 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Ссылка-приглашение ведёт на страницу проекта: без приложения человек попадает
+                 на GitHub и может его скачать, с приложением — система предложит открыть здесь.
+                 Домен не наш, поэтому верифицированного App Link нет; на Android 12+ ссылка
+                 откроется в браузере, пока пользователь не разрешит её в настройках приложения —
+                 поэтому есть ещё приём через «Поделиться» и ручная вставка. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="github.com"
+                    android:pathPrefix="/SworderZ/streetpass" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
 

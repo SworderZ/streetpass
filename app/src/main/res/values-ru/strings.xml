@@ -155,7 +155,28 @@
 
     <!-- Friends -->
     <string name="section_friends">Друзья</string>
-    <string name="friends_empty">Друзей пока нет. Нажмите на человека в истории или в списке выше, чтобы отметить его другом.</string>
+    <string name="friends_empty">Друзей пока нет. Нажмите на человека в истории или в списке выше, чтобы отметить его другом, или добавьте друга по QR-коду или ссылке-приглашению.</string>
+    <string name="friends_my_invite">Моё приглашение</string>
+    <string name="friends_add">Добавить друга</string>
+
+    <!-- Invites -->
+    <string name="invite_title">Пригласить друга</string>
+    <string name="invite_qr_description">QR-код со ссылкой-приглашением</string>
+    <string name="invite_text">Дайте другу отсканировать этот код в StreetPass или отправьте ему ссылку. В приглашении только ваш ID и ник, подписанные вашим ключом. Любой, у кого оно есть, сможет добавить вас в друзья на своём телефоне.</string>
+    <string name="invite_share">Поделиться ссылкой</string>
+    <string name="invite_share_text">Добавь меня в друзья в StreetPass: %1$s</string>
+    <string name="add_friend_title">Добавить друга</string>
+    <string name="add_friend_scan_hint">Наведите камеру на QR-код друга или вставьте ссылку-приглашение ниже.</string>
+    <string name="add_friend_paste_hint">Вставьте ссылку-приглашение ниже.</string>
+    <string name="add_friend_camera_denied">Нет доступа к камере. Друга всё равно можно добавить, вставив ссылку-приглашение.</string>
+    <string name="add_friend_allow_camera">Разрешить камеру</string>
+    <string name="add_friend_link_label">Ссылка-приглашение</string>
+    <string name="add_friend_submit">Добавить</string>
+    <string name="add_friend_link_invalid">Это не приглашение StreetPass: ссылка неполная или подпись не сходится.</string>
+    <string name="confirm_invite_title">Добавить в друзья?</string>
+    <string name="confirm_invite_text">Пометка появится только на этом телефоне. Встречи с этим человеком запишутся, когда ваши телефоны окажутся рядом.</string>
+    <string name="confirm_invite_self">Это ваше собственное приглашение.</string>
+    <string name="confirm_invite_add">Добавить</string>
     <string name="friend_since">в друзьях с %1$s</string>
 
     <!-- Achievements -->

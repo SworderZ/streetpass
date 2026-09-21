@@ -35,6 +35,8 @@ adb logcat -s DiscoveryService BleScanner BleAdvertiser IdentityKeys IdentityRep
 
 - Никакого GPS, `ACCESS_COARSE_LOCATION`, Geofencing, Location API. На Android 12+
   `BLUETOOTH_SCAN` объявлен с `neverForLocation` — этот флаг не снимать.
+- Разрешение `CAMERA` — только для сканера QR-приглашений (`ui/friends/QrScanner`),
+  запрашивается на его экране; кадры не сохраняются.
 - Разрешение `INTERNET` есть ради одного: проверки обновлений в
   `data/update/UpdateRepository` через GitHub Releases API, только по нажатию
   пользователя. Никакого другого сетевого кода, аналитики, телеметрии. Сетевых
@@ -50,6 +52,8 @@ adb logcat -s DiscoveryService BleScanner BleAdvertiser IdentityKeys IdentityRep
   без явной просьбы: это ломает совместимость с уже установленными сборками.
 - ID — производная от ключа подписи (`IdentityKeys`), не случайные байты. Не
   заводить второй источник ID и не подписывать ничего другим ключом.
+- Формат приглашения в `FriendInvite` (домен подписи, раскладка) и параметр
+  `#invite=` в ссылке — часть протокола, менять только по явной просьбе.
 - Не переименовывать id достижений в `Achievement.ALL` — они лежат в базе.
   Достижения считаются по базе через `AchievementRepository.check`, а не по
   событиям: не заводить счётчики «в обход».

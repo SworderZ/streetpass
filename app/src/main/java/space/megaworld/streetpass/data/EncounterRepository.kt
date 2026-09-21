@@ -7,6 +7,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import space.megaworld.streetpass.core.FriendInvite
 import space.megaworld.streetpass.core.Nicknames
 import space.megaworld.streetpass.core.TimeRanges
 import space.megaworld.streetpass.data.db.AppDatabase
@@ -74,6 +75,9 @@ class EncounterRepository(
 
             val cooldownMs = cooldownMinutes * 60_000L
             val counts = now - peer.lastEncounterAt >= cooldownMs
+            // Друг из приглашения или после очистки истории уже есть в базе, но встреч у него
+            // ноль — первая реальная встреча должна и выглядеть первой.
+            val firstMeeting = peer.encounterCount == 0
             val bestRssi = when {
                 !storeRssi -> peer.bestRssi
                 peer.bestRssi == RSSI_NOT_STORED -> rssi
@@ -92,9 +96,9 @@ class EncounterRepository(
             )
             if (counts) {
                 encounters.insert(
-                    EncounterEntity(peerId = peerId, timestamp = now, rssi = storedRssi, firstMeeting = false),
+                    EncounterEntity(peerId = peerId, timestamp = now, rssi = storedRssi, firstMeeting = firstMeeting),
                 )
-                SightingResult.Registered(peerId, firstMeeting = false)
+                SightingResult.Registered(peerId, firstMeeting = firstMeeting)
             } else {
                 SightingResult.Cooldown
             }
@@ -148,6 +152,39 @@ class EncounterRepository(
     /** Метка «друг» — локальная: другой человек о ней не узнаёт, в эфир ничего не уходит. */
     suspend fun setFriend(peerId: String, friend: Boolean, now: Long) {
         peers.setFriendSince(peerId, if (friend) now else null)
+    }
+
+    /**
+     * Друг по приглашению: peer'а могло ещё не быть в базе — тогда он появляется с нулём
+     * встреч и ником из приглашения. Уже известному peer'у ник из приглашения не навязываем:
+     * из эфира приходит более свежий.
+     */
+    suspend fun addFriend(invite: FriendInvite.Invite, now: Long) {
+        db.withTransaction {
+            val existing = peers.getById(invite.peerId)
+            if (existing == null) {
+                peers.upsert(
+                    PeerEntity(
+                        peerId = invite.peerId,
+                        firstSeenAt = now,
+                        lastSeenAt = 0,
+                        lastEncounterAt = 0,
+                        encounterCount = 0,
+                        lastRssi = RSSI_NOT_STORED,
+                        bestRssi = RSSI_NOT_STORED,
+                        nickname = invite.nickname,
+                        friendSince = now,
+                    ),
+                )
+            } else {
+                peers.upsert(
+                    existing.copy(
+                        friendSince = existing.friendSince ?: now,
+                        nickname = existing.nickname ?: invite.nickname,
+                    ),
+                )
+            }
+        }
     }
 
     /** Локальное имя peer'а; чистится теми же правилами, что и ник, пустое — снимает имя. */
