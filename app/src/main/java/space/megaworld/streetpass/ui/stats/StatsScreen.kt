@@ -95,7 +95,7 @@ class StatsViewModel(container: AppContainer) : ViewModel() {
         today,
         week,
         total,
-        container.achievementRepository.progress,
+        container.achievementRepository.visibleProgress,
     ) { today, week, total, achievements ->
         StatsUiState(
             todayEncounters = today.encounters,

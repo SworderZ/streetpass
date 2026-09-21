@@ -1,6 +1,8 @@
 package space.megaworld.streetpass.ui
 
 import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.pluralStringResource
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -30,6 +32,16 @@ object Format {
         date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale).lowercase(locale)
 
     fun decimal(value: Float): String = String.format(locale, "%.1f", value)
+
+    /** «45 minutes», «2 hours», «1 hour 30 minutes» — из минут. */
+    @Composable
+    fun duration(minutes: Int): String {
+        val hours = minutes / 60
+        val rest = minutes % 60
+        val hoursText = if (hours > 0) pluralStringResource(R.plurals.hours_count, hours, hours) else null
+        val minutesText = if (rest > 0 || hours == 0) pluralStringResource(R.plurals.minutes_count, rest, rest) else null
+        return listOfNotNull(hoursText, minutesText).joinToString(" ")
+    }
 
     @StringRes
     fun rssiDistanceHintRes(rssi: Int): Int = when {

@@ -78,6 +78,12 @@
         <item quantity="many">%d встреч</item>
         <item quantity="other">%d встречи</item>
     </plurals>
+    <plurals name="hours_count">
+        <item quantity="one">%d час</item>
+        <item quantity="few">%d часа</item>
+        <item quantity="many">%d часов</item>
+        <item quantity="other">%d часа</item>
+    </plurals>
     <plurals name="minutes_count">
         <item quantity="one">%d минуту</item>
         <item quantity="few">%d минуты</item>
@@ -116,7 +122,7 @@
     <!-- Настройки: антидубль -->
     <string name="section_cooldown">Антидубль</string>
     <string name="cooldown_text">Повторная встреча с тем же человеком засчитывается не раньше, чем через %1$s</string>
-    <string name="cooldown_help">Всё это время человек может быть рядом, сигнал будет приниматься, но новая встреча в историю не попадёт. Диапазон: %1$d–%2$d минут.</string>
+    <string name="cooldown_help">Всё это время человек может быть рядом, сигнал будет приниматься, но новая встреча в историю не попадёт. Диапазон: от %1$s до %2$s.</string>
 
     <!-- Настройки: порог RSSI -->
     <string name="section_rssi">Порог сигнала</string>
@@ -130,7 +136,6 @@
 
     <!-- Настройки: приватность -->
     <string name="section_privacy">Приватность</string>
-    <string name="privacy_text">Что собирается: анонимный 8-байтовый ID каждого встреченного устройства, его ник, если он его передаёт, время встречи и, если включено ниже, уровень сигнала.\n\nЧто не собирается: местоположение, MAC-адреса, имена устройств, контакты, любые данные о вас. Всё хранится только на этом телефоне: в интернет приложение ходит только за проверкой обновлений по вашей команде, а из облачного бэкапа оно исключено.</string>
     <string name="sw_store_rssi_title">Хранить уровень сигнала</string>
     <string name="sw_store_rssi_sub">RSSI в истории помогает понять, насколько близко был человек</string>
     <string name="your_id">Ваш ID</string>
@@ -261,6 +266,7 @@
     <string name="update_no_apk">К релизу не приложен APK — скачать можно только вручную со страницы релиза.</string>
     <string name="update_download">Скачать и установить</string>
     <string name="update_open_github">Открыть на GitHub</string>
+    <string name="update_releases_github">Все релизы на GitHub</string>
     <string name="update_downloading">Загрузка %1$s…</string>
     <string name="update_downloaded_text">Файл скачан, должен открыться установщик. Если он не появился — откройте уведомление о загрузке.</string>
     <string name="update_redownload">Скачать заново</string>

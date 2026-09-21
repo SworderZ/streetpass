@@ -71,7 +71,7 @@ old ones — keep a backup.
   ID and the signal strength are taken from a result; MAC addresses and device names
   are neither read nor stored.
 - An encounter with the same ID counts no more often than once per "duplicate
-  protection" window (60 minutes by default, configurable). Weak signals — people
+  protection" window (60 minutes by default, configurable from 5 minutes to 12 hours). Weak signals — people
   behind a wall — are dropped by an RSSI threshold.
 - All of this is done by a foreground service with a persistent notification; scanning
   runs in cycles (power profiles in the settings).

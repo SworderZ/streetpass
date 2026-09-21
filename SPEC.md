@@ -165,7 +165,7 @@ than 10 minutes once it exceeds 512 elements.
 ### 5.2 Duplicate protection (in the repository, persistent)
 
 A repeat encounter with the same `peerId` counts no sooner than
-`cooldownMinutes` (60 by default, configurable 5–240) after the previous
+`cooldownMinutes` (60 by default, configurable 5 min – 12 h in 5-minute steps) after the previous
 **counted** encounter. `lastSeenAt` is still updated on every accepted packet —
 the database shows real activity, the counter is not inflated.
 
@@ -233,8 +233,10 @@ after every registered encounter and after a friend-list change:
 | STREAK | consecutive days with encounters (today, or ending yesterday if today has none yet) | 7, 30 |
 
 An unlock stores `unlockedAt` once (INSERT OR IGNORE) so the date never moves.
-Unseen unlocks show as a card on Home until dismissed (`seenAt`); the full grid
-with progress bars lives at the bottom of Stats, next to the friends list.
+Unseen unlocks show as a card on Home until dismissed (`seenAt`); the grid
+with progress bars lives at the bottom of Stats, next to the friends list. Per
+kind it shows the unlocked tiers plus only the next locked one
+(`visibleProgress`) — "500 encounters" is not shown until 100 is done.
 
 "Clear history" deletes encounters and non-friend peers; friends stay with
 their counters reset to zero, achievements are untouched.
@@ -383,16 +385,18 @@ per app (`localeConfig`). Dates and numbers are formatted for
 - Discovery: broadcast my ID / look for others / accept unsigned IDs (off by
   default) / start after reboot.
 - Power profile: three radio buttons with descriptions.
-- Duplicate protection: slider 5–240 min.
+- Duplicate protection: slider 5 min – 12 h.
 - RSSI threshold: slider −100…−40 dBm with a distance hint.
-- Privacy: text about what is and is not collected; "store RSSI" toggle; change
-  ID (with confirmation); clear history (with confirmation).
+- Privacy: "store RSSI" toggle; own ID; full-width "Change ID" and "Clear
+  history" buttons (both with confirmation). What is and is not collected is
+  documented in the README, not repeated on the screen.
 - Updates: current version, "Check for updates" button. Request to
   `api.github.com/repos/<owner>/<repo>/releases/latest`, compare `tag_name`
   with `BuildConfig.VERSION_NAME`. If newer — release notes, buttons
   "Download and install" (DownloadManager → system installer, needs
   `REQUEST_INSTALL_PACKAGES`) and "Open on GitHub". Show network errors as text,
-  do not crash.
+  do not crash. A permanent "All releases on GitHub" link is always there: the
+  in-app check and download do not work on every phone.
 
 ### 9.1 Releases
 

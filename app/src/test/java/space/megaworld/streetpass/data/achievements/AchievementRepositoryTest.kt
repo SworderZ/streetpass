@@ -181,6 +181,19 @@ class AchievementRepositoryTest {
     }
 
     @Test
+    fun visibleProgressShowsOnlyNextLockedTierPerKind() = runBlocking {
+        repeat(5) { meet(peer(it), t0) }
+        achievements.check(t0)
+
+        val visible = achievements.visibleProgress.first()
+
+        val people = visible.filter { it.achievement.kind == AchievementKind.PEOPLE }.map { it.achievement.id }
+        assertEquals(listOf("people_5", "people_15"), people)
+        assertEquals(listOf("encounters_10"), visible.filter { it.achievement.kind == AchievementKind.ENCOUNTERS }.map { it.achievement.id })
+        assertEquals(AchievementKind.entries.size + 1, visible.size)
+    }
+
+    @Test
     fun aliasIsSanitisedAndEmptyClearsIt() = runBlocking {
         meet(peer(0), t0)
 

@@ -16,7 +16,9 @@ data class AppSettings(
     companion object {
         const val DEFAULT_COOLDOWN_MINUTES = 60
         const val DEFAULT_MIN_RSSI = -95
-        val COOLDOWN_RANGE = 5..240
+        /** До 12 часов: «один человек — одна встреча в день» для коллег и соседей. */
+        val COOLDOWN_RANGE = 5..720
+        const val COOLDOWN_STEP_MINUTES = 5
         val RSSI_RANGE = -100..-40
     }
 }

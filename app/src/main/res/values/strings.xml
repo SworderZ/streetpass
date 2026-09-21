@@ -80,6 +80,10 @@
         <item quantity="one">%d minute</item>
         <item quantity="other">%d minutes</item>
     </plurals>
+    <plurals name="hours_count">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
 
     <!-- Peer dialog -->
     <string name="peer_id_label">ID</string>
@@ -197,7 +201,7 @@
     <!-- Settings: cooldown -->
     <string name="section_cooldown">Duplicate protection</string>
     <string name="cooldown_text">A repeat encounter with the same person counts no sooner than %1$s later</string>
-    <string name="cooldown_help">During that time the person may be nearby and the signal received, but no new encounter is added to the history. Range: %1$d–%2$d minutes.</string>
+    <string name="cooldown_help">During that time the person may be nearby and the signal received, but no new encounter is added to the history. Range: %1$s to %2$s.</string>
 
     <!-- Settings: RSSI -->
     <string name="section_rssi">Signal threshold</string>
@@ -211,7 +215,6 @@
 
     <!-- Settings: privacy -->
     <string name="section_privacy">Privacy</string>
-    <string name="privacy_text">What is collected: the anonymous 8-byte ID of each device met, its nickname if it broadcasts one, the time of the encounter and, if enabled below, the signal strength.\n\nWhat is not collected: location, MAC addresses, device names, contacts, anything about you. Everything stays on this phone: the app only goes online to check for updates when you ask it to, and it is excluded from cloud backup.</string>
     <string name="sw_store_rssi_title">Store signal strength</string>
     <string name="sw_store_rssi_sub">RSSI in the history helps judge how close the person was</string>
     <string name="your_id">Your ID</string>
@@ -237,6 +240,7 @@
     <string name="update_no_apk">No APK is attached to this release — it can only be downloaded manually from the release page.</string>
     <string name="update_download">Download and install</string>
     <string name="update_open_github">Open on GitHub</string>
+    <string name="update_releases_github">All releases on GitHub</string>
     <string name="update_downloading">Downloading %1$s…</string>
     <string name="update_downloaded_text">The file has been downloaded and the installer should open. If it did not, tap the download notification.</string>
     <string name="update_redownload">Download again</string>

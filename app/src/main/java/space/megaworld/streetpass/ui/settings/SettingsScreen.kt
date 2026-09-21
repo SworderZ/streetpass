@@ -123,6 +123,9 @@ class SettingsViewModel(
 
     val currentVersion: String = BuildConfig.VERSION_NAME
 
+    /** Страница релизов — на случай, если проверка или скачивание из приложения не работают. */
+    val releasesUrl: String = "${container.projectUrl}/releases"
+
     fun checkForUpdates() {
         viewModelScope.launch { container.updateRepository.check() }
     }
@@ -240,13 +243,7 @@ fun SettingsScreen(
         item {
             SectionTitle(stringResource(R.string.section_privacy))
             Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.privacy_text),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     SwitchRow(
                         title = stringResource(R.string.sw_store_rssi_title),
                         subtitle = stringResource(R.string.sw_store_rssi_sub),
@@ -255,21 +252,27 @@ fun SettingsScreen(
                     )
                     HorizontalDivider()
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(stringResource(R.string.your_id), style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        text = stringResource(R.string.your_id),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     Text(
                         text = if (peerId.isEmpty()) "…" else Hex.grouped(peerId),
                         style = MaterialTheme.typography.titleMedium,
                         fontFamily = FontFamily.Monospace,
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedButton(onClick = { confirmRegenerate = true }, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.btn_change_id))
-                        }
-                        OutlinedButton(onClick = { confirmClear = true }, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.btn_clear_history))
-                        }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    // Кнопки во всю ширину, одна под другой: в две колонки подписи переносились
+                    // на разное число строк и кнопки выходили разной высоты.
+                    OutlinedButton(onClick = { confirmRegenerate = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.btn_change_id))
                     }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedButton(onClick = { confirmClear = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.btn_clear_history))
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
                 }
             }
         }
@@ -280,6 +283,7 @@ fun SettingsScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     UpdateSection(
                         currentVersion = viewModel.currentVersion,
+                        releasesUrl = viewModel.releasesUrl,
                         state = updateState,
                         onCheck = viewModel::checkForUpdates,
                         onDownload = { release ->
@@ -386,6 +390,7 @@ private fun NicknameEditor(
 @Composable
 private fun UpdateSection(
     currentVersion: String,
+    releasesUrl: String,
     state: UpdateState,
     onCheck: () -> Unit,
     onDownload: (ReleaseInfo) -> Unit,
@@ -402,7 +407,9 @@ private fun UpdateSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(12.dp))
-            OutlinedButton(onClick = onCheck) { Text(stringResource(R.string.update_check)) }
+            OutlinedButton(onClick = onCheck, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.update_check))
+            }
         }
         UpdateState.Checking -> {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -416,7 +423,9 @@ private fun UpdateSection(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(modifier = Modifier.height(12.dp))
-            OutlinedButton(onClick = onCheck) { Text(stringResource(R.string.update_check_again)) }
+            OutlinedButton(onClick = onCheck, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.update_check_again))
+            }
         }
         is UpdateState.Available -> {
             ReleaseDetails(state.release)
@@ -466,6 +475,13 @@ private fun UpdateSection(
                 }
                 TextButton(onClick = onReset) { Text(stringResource(R.string.close)) }
             }
+        }
+    }
+    if (state !is UpdateState.Available) {
+        // Прямой путь на страницу релизов: проверка и скачивание из приложения работают не везде.
+        Spacer(modifier = Modifier.height(8.dp))
+        TextButton(onClick = { onOpenPage(releasesUrl) }, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.update_releases_github))
         }
     }
 }
@@ -557,21 +573,20 @@ private fun CooldownSlider(
     // Локальное состояние на время перетаскивания: в DataStore пишем только по отпусканию.
     var local by remember(value) { mutableIntStateOf(value) }
     val range = AppSettings.COOLDOWN_RANGE
+    val step = AppSettings.COOLDOWN_STEP_MINUTES
     Text(
-        text = stringResource(
-            R.string.cooldown_text,
-            pluralStringResource(R.plurals.minutes_count, local, local),
-        ),
+        text = stringResource(R.string.cooldown_text, Format.duration(local)),
         style = MaterialTheme.typography.bodyMedium,
     )
     Slider(
         value = local.toFloat(),
-        onValueChange = { local = it.roundToInt().coerceIn(range) },
+        // Диапазон до 12 часов: без шага по 5 минут ползунок дёргается по одной минуте.
+        onValueChange = { local = ((it / step).roundToInt() * step).coerceIn(range) },
         onValueChangeFinished = { onCommit(local) },
         valueRange = range.first.toFloat()..range.last.toFloat(),
     )
     Text(
-        text = stringResource(R.string.cooldown_help, range.first, range.last),
+        text = stringResource(R.string.cooldown_help, Format.duration(range.first), Format.duration(range.last)),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

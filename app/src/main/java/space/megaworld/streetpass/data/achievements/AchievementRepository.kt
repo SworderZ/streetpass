@@ -61,6 +61,17 @@ class AchievementRepository(
         }
     }
 
+    /**
+     * Для экрана: у каждого вида показываем полученные ступени и одну ближайшую закрытую.
+     * «Записать 500 встреч» появляется только после 100 — иначе сетка пугает и занимает экран.
+     */
+    val visibleProgress: Flow<List<AchievementProgress>> = progress.map { all ->
+        val shownLocked = HashSet<AchievementKind>()
+        all.filter { item ->
+            item.unlocked || shownLocked.add(item.achievement.kind)
+        }
+    }
+
     /** Полученные, но ещё не показанные пользователю — карточка на главном экране. */
     val unseen: Flow<List<Achievement>> = achievements.all().map { entities ->
         entities.filter { it.seenAt == null }.mapNotNull { Achievement.byId(it.id) }
