@@ -105,9 +105,9 @@
     <!-- Invites -->
     <string name="invite_title">Invite a friend</string>
     <string name="invite_qr_description">QR code with your invite link</string>
-    <string name="invite_text">Let a friend scan this code in StreetPass, or send them the link. The invite contains your ID and nickname, signed with your key — nothing else. Anyone who has it can add you as a friend on their phone.</string>
+    <string name="invite_text">Let a friend scan this code in StreetPass, or send them the link. If the link does not open by itself, they can share the message to StreetPass or paste it in “Add friend”. The invite contains your ID and nickname, signed with your key — nothing else.</string>
     <string name="invite_share">Share link</string>
-    <string name="invite_share_text">Add me as a friend in StreetPass: %1$s</string>
+    <string name="invite_share_text">Add me as a friend in StreetPass: %1$s\n\nNo app yet? %2$s</string>
     <string name="add_friend_title">Add friend</string>
     <string name="add_friend_scan_hint">Point the camera at a friend’s QR code, or paste an invite link below.</string>
     <string name="add_friend_paste_hint">Paste the invite link below.</string>

@@ -88,8 +88,11 @@ class FriendInviteViewModel(private val container: AppContainer) : ViewModel() {
 
     /** Ссылка переподписывается при смене ника — он входит в приглашение. */
     val inviteLink: StateFlow<String?> = container.identityRepository.nickname
-        .map { container.identityRepository.invitePayload()?.let { FriendInvite.link(container.projectUrl, it) } }
+        .map { container.identityRepository.invitePayload()?.let(FriendInvite::appLink) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Куда скачать приложение — добавляется к тексту «Поделиться». */
+    val releasesUrl: String = "${container.projectUrl}/releases"
 
     val qrCode: StateFlow<ImageBitmap?> = inviteLink
         .map { link -> link?.let { withContext(Dispatchers.Default) { renderQr(it) } } }
@@ -152,6 +155,7 @@ fun MyInviteDialog(
     val link by viewModel.inviteLink.collectAsStateWithLifecycle()
     val qr by viewModel.qrCode.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val releasesUrl = viewModel.releasesUrl
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -192,7 +196,7 @@ fun MyInviteDialog(
         confirmButton = {
             TextButton(
                 enabled = link != null,
-                onClick = { link?.let { shareLink(context, it) } },
+                onClick = { link?.let { shareLink(context, it, releasesUrl) } },
             ) { Text(stringResource(R.string.invite_share)) }
         },
         dismissButton = {
@@ -201,10 +205,10 @@ fun MyInviteDialog(
     )
 }
 
-private fun shareLink(context: android.content.Context, link: String) {
+private fun shareLink(context: android.content.Context, link: String, releasesUrl: String) {
     val send = Intent(Intent.ACTION_SEND)
         .setType("text/plain")
-        .putExtra(Intent.EXTRA_TEXT, context.getString(R.string.invite_share_text, link))
+        .putExtra(Intent.EXTRA_TEXT, context.getString(R.string.invite_share_text, link, releasesUrl))
     val chooser = Intent.createChooser(send, null)
         // Само приложение принимает ссылки через «Поделиться» — себя из списка убираем.
         .putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS, arrayOf(ComponentName(context, MainActivity::class.java)))

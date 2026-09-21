@@ -63,6 +63,16 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Собственная схема для приглашений: открывается только приложением, без
+                 выбора браузера. Именно её несут QR-код и кнопка «Поделиться». -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="streetpass"
+                    android:host="friend" />
+            </intent-filter>
             <!-- Ссылка-приглашение ведёт на страницу проекта: без приложения человек попадает
                  на GitHub и может его скачать, с приложением — система предложит открыть здесь.
                  Домен не наш, поэтому верифицированного App Link нет; на Android 12+ ссылка

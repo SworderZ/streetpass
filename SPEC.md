@@ -202,18 +202,22 @@ version(1) | public key, compressed(33) | nickname length(1) | nickname UTF-8(0.
 
 signed with the domain `"StreetPass-invite-v1"` (different from the ID proof
 domain, so the two signatures are not interchangeable). No timestamp: an invite
-is meant to be stored and forwarded. It travels as base64url in
-`https://github.com/<repo>#invite=<payload>` — without the app the link lands
-on the project page, with the app the system can open it in the app. The QR
-code (ZXing) contains the same link. The receiver verifies the signature,
+is meant to be stored and forwarded. It travels as base64url in the
+`invite=` parameter. The primary form is the app's own scheme,
+`streetpass://friend?invite=<payload>` (intent filter on scheme + host): it
+opens only in the app, with no browser disambiguation; the QR code (ZXing) and
+the share text carry this form, the share text adds the releases page for
+people without the app. `https://github.com/<repo>#invite=<payload>` with the
+same payload is also accepted. The receiver verifies the signature,
 derives the ID from the key and creates the peer with zero encounters (or marks
 an existing one); the first real encounter is recorded as "first meeting"
 (`encounterCount == 0`).
 
 Ways in: the in-app scanner (CameraX + ZXing, `CAMERA` permission requested
-only on that screen; the domain is not ours, so there is no verified App Link
-and on Android 12+ the link opens in the browser unless the user allows it in
-the app's settings), the `ACTION_VIEW` intent filter for the project URL, the
+only on that screen), the `ACTION_VIEW` intent filters for `streetpass://friend`
+and for the project URL (the domain is not ours, so there is no verified App
+Link and on Android 12+ the https form opens in the browser unless the user
+allows it in the app's settings), the
 `ACTION_SEND text/plain` filter ("Share → StreetPass" from a messenger), and a
 plain text field to paste the link. All four end in the same confirmation
 dialog (`AppContainer.pendingInvite`), shown over any tab. Own invite is

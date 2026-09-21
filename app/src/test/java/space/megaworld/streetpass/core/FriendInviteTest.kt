@@ -33,6 +33,17 @@ class FriendInviteTest {
     }
 
     @Test
+    fun appLinkUsesOwnSchemeAndParses() {
+        val payload = FriendInvite.create(keys.private, keys.public, "Alice")
+        val link = FriendInvite.appLink(payload)
+
+        assertTrue(link.startsWith("streetpass://friend?invite="))
+        assertEquals(Hex.encode(IdentityProof.peerId(keys.public)), FriendInvite.parse(link)!!.peerId)
+        // Тот же payload в ссылке на страницу проекта даёт то же приглашение.
+        assertEquals(FriendInvite.parse(link)!!.peerId, FriendInvite.parse(FriendInvite.link(page, payload))!!.peerId)
+    }
+
+    @Test
     fun linkIsUrlSafeAndPointsAtProjectPage() {
         val link = link("Ann Ж!")
 

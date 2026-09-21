@@ -15,13 +15,18 @@ import java.util.Base64
  * version(1) | публичный ключ, сжатый(33) | длина ника(1) | ник UTF-8(0..24) | ECDSA r||s (64)
  * ```
  * Подписывается всё до подписи с доменом [DOMAIN]. Наружу уходит base64url без «=»
- * в параметре `invite=` ссылки на страницу проекта: без приложения человек попадает на
- * GitHub, с приложением — ссылка открывается в нём. QR-код содержит ту же ссылку.
+ * в параметре `invite=`. Основная форма — собственная схема `streetpass://friend?invite=…`:
+ * она открывается только в приложении, без выбора браузера. Ссылка на страницу проекта
+ * с тем же параметром тоже принимается — на случай, если приложения ещё нет.
  */
 object FriendInvite {
 
     const val VERSION: Byte = 1
     const val PARAMETER = "invite"
+
+    /** Схема и хост зарегистрированы в манифесте; менять только вместе с ним. */
+    const val SCHEME = "streetpass"
+    const val HOST = "friend"
 
     private const val DOMAIN = "StreetPass-invite-v1"
     private const val SIGNATURE_ALGORITHM = "SHA256withECDSA"
@@ -44,6 +49,10 @@ object FriendInvite {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(body + signature)
     }
 
+    /** Ссылка, которую открывает только приложение — для QR и «Поделиться». */
+    fun appLink(payload: String): String = "$SCHEME://$HOST?$PARAMETER=$payload"
+
+    /** Ссылка на страницу проекта с тем же приглашением — для тех, у кого приложения нет. */
     fun link(pageUrl: String, payload: String): String = "$pageUrl#$PARAMETER=$payload"
 
     /**

@@ -167,9 +167,9 @@
     <!-- Invites -->
     <string name="invite_title">Пригласить друга</string>
     <string name="invite_qr_description">QR-код со ссылкой-приглашением</string>
-    <string name="invite_text">Дайте другу отсканировать этот код в StreetPass или отправьте ему ссылку. В приглашении только ваш ID и ник, подписанные вашим ключом. Любой, у кого оно есть, сможет добавить вас в друзья на своём телефоне.</string>
+    <string name="invite_text">Дайте другу отсканировать этот код в StreetPass или отправьте ему ссылку. Если ссылка сама не открывается, сообщение можно отправить в StreetPass через «Поделиться» или вставить в «Добавить друга». В приглашении только ваш ID и ник, подписанные вашим ключом.</string>
     <string name="invite_share">Поделиться ссылкой</string>
-    <string name="invite_share_text">Добавь меня в друзья в StreetPass: %1$s</string>
+    <string name="invite_share_text">Добавь меня в друзья в StreetPass: %1$s\n\nЕщё нет приложения? %2$s</string>
     <string name="add_friend_title">Добавить друга</string>
     <string name="add_friend_scan_hint">Наведите камеру на QR-код друга или вставьте ссылку-приглашение ниже.</string>
     <string name="add_friend_paste_hint">Вставьте ссылку-приглашение ниже.</string>
