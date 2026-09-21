@@ -1,116 +1,140 @@
 # StreetPass
 
-Android-приложение, которое в фоне обнаруживает других пользователей StreetPass по
-Bluetooth Low Energy и считает встречи. Без GPS, без сервера, без аккаунтов — всё
-хранится только на телефоне. Полное ТЗ — в `SPEC.md`, правила разработки — в `CLAUDE.md`.
+An Android app that discovers other StreetPass users nearby over Bluetooth Low Energy
+in the background and counts encounters. No GPS, no server, no accounts — everything
+stays on the phone. The full specification is in `SPEC.md`, development rules are in
+`CLAUDE.md`.
 
-## Сборка
+## Building
 
-Требуются JDK 17 и Android SDK (platform 35, build-tools 35). Путь к SDK — в
-`local.properties` (`sdk.dir=...`), путь к JDK — через `JAVA_HOME` или
-`org.gradle.java.home` в `~/.gradle/gradle.properties`.
+Requires JDK 17 and the Android SDK (platform 35, build-tools 35). Point
+`local.properties` at the SDK (`sdk.dir=...`) and at the JDK via `JAVA_HOME` or
+`org.gradle.java.home` in `~/.gradle/gradle.properties`.
 
 ```bash
-./gradlew assembleDebug          # сборка
-./gradlew installDebug           # установка на подключённое устройство
-./gradlew lint test              # проверки
+./gradlew assembleDebug          # build
+./gradlew installDebug           # install on a connected device
+./gradlew lint test              # checks
 adb logcat -s DiscoveryService BleScanner BleAdvertiser
 ```
 
-BLE в эмуляторе не работает — проверять только на физических устройствах.
+BLE does not work in the emulator — test on physical devices only.
 
-## Установка и обновления
+## Installing and updating
 
-Готовые APK — на странице [Releases](https://github.com/SworderZ/streetpass/releases).
-Ставьте на телефоны именно их: они подписаны релизным ключом, и приложение сможет
-обновляться поверх себя через «Настройки → Обновления». Debug-сборка из
-`./gradlew installDebug` подписана другим ключом — поверх неё релиз не встанет,
-придётся удалить и поставить заново.
+Ready-made APKs are on the [Releases](https://github.com/SworderZ/streetpass/releases)
+page. Install those on phones: they are signed with the release key, so the app can
+update itself in place via "Settings → Updates". A debug build from
+`./gradlew installDebug` is signed with a different key — a release will not install
+over it; uninstall and install again.
 
-### Как выпустить новую версию
+### Publishing a new version
 
-1. Закоммитить изменения в `master`.
-2. Поставить тег и запушить его: `git tag v0.2.0 && git push origin v0.2.0`.
-3. GitHub Actions прогонит `lint test`, соберёт подписанный `assembleRelease`
-   (`versionName` берётся из тега, `versionCode` — из номера запуска) и создаст
-   релиз с приложенным `streetpass-v0.2.0.apk`.
+1. Commit the changes to `master`.
+2. Tag and push the tag: `git tag v0.2.0 && git push origin v0.2.0`.
+3. GitHub Actions runs `lint test`, builds a signed `assembleRelease` (`versionName`
+   comes from the tag, `versionCode` from the run number) and creates a release with
+   `streetpass-v0.2.0.apk` attached.
 
-Для локальной release-сборки нужен `keystore.properties` в корне проекта
-(в репозиторий не попадает):
+A local release build needs `keystore.properties` in the project root (not committed):
 
 ```
-storeFile=/путь/к/streetpass-release.jks
+storeFile=/path/to/streetpass-release.jks
 storePassword=...
 keyAlias=streetpass
 keyPassword=...
 ```
 
-Тот же ключ лежит в секретах репозитория (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`,
-`KEY_ALIAS`, `KEY_PASSWORD`). Потеря ключа означает, что новые версии не смогут
-обновлять старые — храните резервную копию.
+The same key lives in the repository secrets (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`,
+`KEY_ALIAS`, `KEY_PASSWORD`). Losing the key means new versions can no longer update
+old ones — keep a backup.
 
-## Как это работает
+## How it works
 
-- При первом запуске генерируются 8 случайных байт — анонимный ID. Он передаётся в
-  эфир неподключаемой BLE-рекламой (Service Data под 16-битным UUID `0x5350`).
-- По желанию можно задать ник (Настройки → Профиль): он уходит вторым пакетом
-  (scan-response, UUID `0x5351`) и показывается другим пользователям вместо ID.
-  Ник виден любому Bluetooth-сканеру рядом — пустой ник означает полную анонимность.
-- Интерфейс на английском и русском, язык берётся из настроек системы.
-- Сканер с фильтром по тому же UUID принимает такие пакеты от других телефонов.
-  Из результата берутся только ID и уровень сигнала; MAC-адреса и имена устройств
-  не читаются и не сохраняются.
-- Встреча с одним и тем же ID засчитывается не чаще, чем раз в «окно антидубля»
-  (по умолчанию 60 минут, настраивается). Слабые сигналы — люди за стеной — отбрасываются
-  по порогу RSSI.
-- Всё это делает foreground-сервис с постоянным уведомлением; сканирование идёт
-  циклами (профили энергопотребления в настройках).
+- On first launch the app creates a signing key (P-256 in AndroidKeyStore; the private
+  part never leaves the system key store). The anonymous ID is the first 8 bytes of the
+  hash of the public key. It is broadcast as non-connectable BLE advertising (Service
+  Data under the 16-bit UUID `0x5350`).
+- So that an ID cannot be copied and broadcast on someone else's behalf, every
+  5 minutes the phone signs "key + time" and sends the signature in chunks in the
+  scan-response (UUID `0x5352`). Another phone counts an encounter only after it has
+  collected and verified the signature: the key must produce exactly this ID, the
+  signature must check out, and the time must be within 10 minutes of its own clock.
+  Phones running older versions that sign nothing are not counted by default — this
+  can be enabled in "Settings → Discovery → Accept unsigned IDs".
+- Optionally you can set a nickname (Settings → Profile): it goes out in a second
+  packet (scan-response, UUID `0x5351`) and is shown to other users instead of the ID.
+  The nickname is visible to any Bluetooth scanner nearby — an empty nickname means
+  full anonymity.
+- The UI is in English and Russian; the language follows the system settings.
+- A scanner filtered by the same UUID receives such packets from other phones. Only the
+  ID and the signal strength are taken from a result; MAC addresses and device names
+  are neither read nor stored.
+- An encounter with the same ID counts no more often than once per "duplicate
+  protection" window (60 minutes by default, configurable). Weak signals — people
+  behind a wall — are dropped by an RSSI threshold.
+- All of this is done by a foreground service with a persistent notification; scanning
+  runs in cycles (power profiles in the settings).
+- Tap any person in the history to mark them as a friend or give them a name. Both are
+  local marks — the other person is not notified and nothing goes over the air.
+- Achievements (Stats tab) are earned for people met (5 … 100), encounters (10 … 500),
+  friends (1 … 10), meeting the same friend many times (10 … 100) and streaks of
+  consecutive days (7, 30). They survive clearing the history.
 
-## Известные ограничения
+## Known limitations
 
-**Обе стороны считают встречу независимо.** Подтверждения между телефонами нет. Если
-один из телефонов потерял пакет (был в паузе цикла сканирования, лежал в кармане
-экраном к телу, у него слабее антенна), встреча запишется только у второго. Для
-взаимного подсчёта оба устройства должны какое-то время находиться рядом — обычно
-хватает одного цикла сканирования (до 2 минут в режиме «Экономия»).
+**Both sides count the encounter independently.** There is no confirmation between the
+phones. If one phone missed the packet (it was in the pause of its scan cycle, lay in a
+pocket screen-to-body, has a weaker antenna), the encounter is recorded only on the
+other one. For a mutual count both devices have to stay nearby for a while — one scan
+cycle is usually enough (up to 2 minutes in the "Saver" profile).
 
-**Не все телефоны умеют BLE-рекламу.** На части устройств Bluetooth-чип не поддерживает
-advertising. Такой телефон будет видеть других, но его не увидит никто — приложение
-покажет об этом предупреждение на главном экране.
+**The signature does not protect against real-time replay.** Someone can record another
+person's packet and replay it within 10 minutes — without a connection between the
+phones this cannot be fixed. The point of the protection is that a *permanent* ID
+cannot be taken over for long.
 
-**Вендорские прошивки убивают фоновые сервисы.** См. ниже.
+**After updating from a build without signatures the ID changes once:** the old one was
+random, the new one is derived from the key. Other users will record a "first meeting"
+again. If the phone's clock is more than 10 minutes off from real time, other phones
+will not accept its signature.
 
-## Если обнаружение останавливается само
+**Not every phone can do BLE advertising.** On some devices the Bluetooth chip does not
+support advertising. Such a phone will see others, but nobody will see it — the app
+shows a warning about this on the Home screen.
 
-Прошивки Xiaomi (MIUI/HyperOS), Huawei/Honor (EMUI), Oppo/Realme/OnePlus (ColorOS),
-Vivo, Samsung (в режиме «глубокого сна») останавливают foreground-сервисы вопреки
-правилам Android. Нужно вручную исключить StreetPass из оптимизации батареи:
+**Vendor firmware kills background services.** See below.
 
-1. **Общий шаг для всех.** Настройки → Приложения → StreetPass → Батарея →
-   «Без ограничений» (или «Не оптимизировать»).
-2. **Xiaomi / Poco / Redmi.** Дополнительно: Настройки → Приложения → StreetPass →
-   «Автозапуск» — включить; в списке недавних приложений потянуть карточку StreetPass
-   вниз и нажать «замок».
-3. **Huawei / Honor.** Настройки → Батарея → Запуск приложений → StreetPass →
-   выключить «Автоматическое управление» и включить все три пункта вручную.
-4. **Oppo / Realme / OnePlus.** Настройки → Батарея → Расширенные настройки →
-   «Оптимизация в режиме сна» — выключить; в разрешениях приложения включить
-   «Автозапуск» и «Работа в фоне».
-5. **Samsung.** Настройки → Обслуживание устройства → Батарея → Ограничения в фоновом
-   режиме → убедиться, что StreetPass нет в списках «Приложения в режиме сна» и
-   «Приложения в режиме глубокого сна».
+## If discovery stops on its own
 
-Сводные инструкции по каждому производителю: dontkillmyapp.com.
+Firmware from Xiaomi (MIUI/HyperOS), Huawei/Honor (EMUI), Oppo/Realme/OnePlus
+(ColorOS), Vivo and Samsung (in "deep sleep" mode) stops foreground services against
+the Android rules. StreetPass has to be excluded from battery optimisation by hand:
 
-## Приватность
+1. **Common step for everyone.** Settings → Apps → StreetPass → Battery →
+   "Unrestricted" (or "Don't optimise").
+2. **Xiaomi / Poco / Redmi.** Additionally: Settings → Apps → StreetPass →
+   "Autostart" — enable; in the recent apps list pull the StreetPass card down and tap
+   the lock.
+3. **Huawei / Honor.** Settings → Battery → App launch → StreetPass → turn off
+   "Manage automatically" and enable all three items manually.
+4. **Oppo / Realme / OnePlus.** Settings → Battery → Advanced settings →
+   "Sleep standby optimisation" — turn off; in the app permissions enable "Autostart"
+   and "Run in background".
+5. **Samsung.** Settings → Device care → Battery → Background usage limits → make sure
+   StreetPass is not in the "Sleeping apps" or "Deep sleeping apps" lists.
 
-- Разрешение на геолокацию на Android 12+ не запрашивается (`BLUETOOTH_SCAN` с
-  `neverForLocation`). На Android 11 и ниже оно требуется самой системой для
-  BLE-сканирования — приложение местоположение не определяет и не хранит.
-- Разрешение `INTERNET` используется только для проверки обновлений по кнопке в
-  настройках: один запрос к GitHub Releases и, если вы согласитесь, скачивание APK.
-  В запросе нет ничего о встречах, вашем ID или устройстве. Других сетевых
-  обращений в коде нет — это легко проверить, весь сетевой код в
+Per-manufacturer instructions: dontkillmyapp.com.
+
+## Privacy
+
+- The location permission is not requested on Android 12+ (`BLUETOOTH_SCAN` with
+  `neverForLocation`). On Android 11 and below the system itself requires it for BLE
+  scanning — the app neither determines nor stores your location.
+- The `INTERNET` permission is used only to check for updates from a button in the
+  settings: one request to GitHub Releases and, if you agree, downloading the APK. The
+  request contains nothing about encounters, your ID or your device. There are no other
+  network calls in the code — this is easy to verify, all networking lives in
   `data/update/UpdateRepository.kt`.
-- `allowBackup="false"`: база не попадает в облачный бэкап.
-- ID можно сменить в любой момент в настройках; историю — стереть.
+- `allowBackup="false"`: the database does not go into cloud backup.
+- The ID can be changed at any time in the settings; the history can be erased.

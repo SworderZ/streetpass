@@ -46,7 +46,7 @@
 
     <string name="identity_title">Как вас видят другие</string>
     <string name="identity_no_nickname">Ник не задан — в эфир уходит только ID. Задать его можно в настройках.</string>
-    <string name="identity_text">ID — это всё, что телефон передаёт в эфир: 8 случайных байт, никак не связанных с вами, аккаунтом или устройством. По ним другие пользователи считают встречу с вами. Сменить ID можно в настройках.</string>
+    <string name="identity_text">ID — это всё, что телефон передаёт в эфир: 8 байт, производных от ключа подписи, который не покидает телефон и никак не связан с вами, аккаунтом или устройством. Раз в несколько минут телефон передаёт и подпись, поэтому выдать себя за вас, скопировав ID, нельзя. Сменить ID можно в настройках.</string>
 
     <!-- Строка встречи -->
     <string name="first_meeting">Первая встреча</string>
@@ -99,6 +99,8 @@
     <string name="sw_advertise_sub">Другие пользователи смогут засчитать встречу с вами</string>
     <string name="sw_scan_title">Искать других</string>
     <string name="sw_scan_sub">Сканировать эфир и записывать встречи</string>
+    <string name="sw_accept_unsigned_title">Принимать неподписанные ID</string>
+    <string name="sw_accept_unsigned_sub">Считать устройства со старыми версиями, которые не подписывают ID. Пока включено, любой может выдать себя за другого, скопировав его ID.</string>
     <string name="sw_autostart_title">Автозапуск после перезагрузки</string>
     <string name="sw_autostart_sub">Если обнаружение было включено, поднять его при старте системы</string>
 
@@ -128,17 +130,101 @@
 
     <!-- Настройки: приватность -->
     <string name="section_privacy">Приватность</string>
-    <string name="privacy_text">Что собирается: случайный 8-байтовый ID каждого встреченного устройства, его ник, если он его передаёт, время встречи и, если включено ниже, уровень сигнала.\n\nЧто не собирается: местоположение, MAC-адреса, имена устройств, контакты, любые данные о вас. Всё хранится только на этом телефоне: в интернет приложение ходит только за проверкой обновлений по вашей команде, а из облачного бэкапа оно исключено.</string>
+    <string name="privacy_text">Что собирается: анонимный 8-байтовый ID каждого встреченного устройства, его ник, если он его передаёт, время встречи и, если включено ниже, уровень сигнала.\n\nЧто не собирается: местоположение, MAC-адреса, имена устройств, контакты, любые данные о вас. Всё хранится только на этом телефоне: в интернет приложение ходит только за проверкой обновлений по вашей команде, а из облачного бэкапа оно исключено.</string>
     <string name="sw_store_rssi_title">Хранить уровень сигнала</string>
     <string name="sw_store_rssi_sub">RSSI в истории помогает понять, насколько близко был человек</string>
     <string name="your_id">Ваш ID</string>
     <string name="btn_change_id">Сменить ID</string>
     <string name="btn_clear_history">Очистить историю</string>
     <string name="dialog_regen_title">Сменить ID?</string>
-    <string name="dialog_regen_text">Другие пользователи начнут видеть вас как нового человека: при следующей встрече у них запишется «первая встреча». Ваша история не изменится.</string>
+    <string name="dialog_regen_text">Будет создан новый ключ подписи, и другие пользователи начнут видеть вас как нового человека: при следующей встрече у них запишется «первая встреча». Ваша история не изменится.</string>
     <string name="dialog_regen_confirm">Сменить</string>
     <string name="dialog_clear_title">Очистить историю?</string>
-    <string name="dialog_clear_text">Все встречи и статистика будут удалены безвозвратно. Обнаружение продолжит работать.</string>
+    <string name="dialog_clear_text">Все встречи и статистика будут удалены безвозвратно. Друзья останутся в списке с обнулёнными счётчиками, полученные достижения сохранятся. Обнаружение продолжит работать.</string>
+
+    <!-- Peer dialog -->
+    <string name="peer_id_label">ID</string>
+    <string name="peer_first_seen">Впервые: %1$s</string>
+    <string name="peer_last_seen">Последняя встреча: %1$s</string>
+    <string name="peer_friend_title">Друг</string>
+    <string name="peer_friend_sub">Пометка только на этом телефоне — другой человек о ней не узнает</string>
+    <string name="peer_alias_label">Имя на этом телефоне</string>
+    <string name="peer_alias_hint">Показывается вместо ника или ID; никуда не передаётся</string>
+    <string name="peer_alias_save">Сохранить</string>
+    <string name="friend_badge">Друг</string>
+
+    <!-- Friends -->
+    <string name="section_friends">Друзья</string>
+    <string name="friends_empty">Друзей пока нет. Нажмите на человека в истории или в списке выше, чтобы отметить его другом.</string>
+    <string name="friend_since">в друзьях с %1$s</string>
+
+    <!-- Achievements -->
+    <string name="section_achievements">Достижения</string>
+    <string name="ach_progress">%1$d / %2$d</string>
+    <string name="ach_unlocked_at">Получено %1$s</string>
+    <string name="ach_new_title">Новое достижение!</string>
+    <string name="ach_new_more">%1$s и ещё %2$d</string>
+    <string name="ach_new_dismiss">Отлично</string>
+    <plurals name="ach_people_title">
+        <item quantity="one">%d человек встречен</item>
+        <item quantity="few">%d человека встречено</item>
+        <item quantity="many">%d человек встречено</item>
+        <item quantity="other">%d человека встречено</item>
+    </plurals>
+    <plurals name="ach_people_desc">
+        <item quantity="one">Встретить %d человека</item>
+        <item quantity="few">Встретить %d разных человека</item>
+        <item quantity="many">Встретить %d разных человек</item>
+        <item quantity="other">Встретить %d разных человека</item>
+    </plurals>
+    <plurals name="ach_encounters_title">
+        <item quantity="one">%d встреча</item>
+        <item quantity="few">%d встречи</item>
+        <item quantity="many">%d встреч</item>
+        <item quantity="other">%d встречи</item>
+    </plurals>
+    <plurals name="ach_encounters_desc">
+        <item quantity="one">Записать %d встречу</item>
+        <item quantity="few">Записать %d встречи в сумме</item>
+        <item quantity="many">Записать %d встреч в сумме</item>
+        <item quantity="other">Записать %d встречи в сумме</item>
+    </plurals>
+    <plurals name="ach_friends_title">
+        <item quantity="one">%d друг</item>
+        <item quantity="few">%d друга</item>
+        <item quantity="many">%d друзей</item>
+        <item quantity="other">%d друга</item>
+    </plurals>
+    <plurals name="ach_friends_desc">
+        <item quantity="one">Отметить другом %d человека</item>
+        <item quantity="few">Отметить друзьями %d человек</item>
+        <item quantity="many">Отметить друзьями %d человек</item>
+        <item quantity="other">Отметить друзьями %d человека</item>
+    </plurals>
+    <plurals name="ach_friend_encounters_title">
+        <item quantity="one">Друг встречен %d раз</item>
+        <item quantity="few">Друг встречен %d раза</item>
+        <item quantity="many">Друг встречен %d раз</item>
+        <item quantity="other">Друг встречен %d раза</item>
+    </plurals>
+    <plurals name="ach_friend_encounters_desc">
+        <item quantity="one">Встретить одного и того же друга %d раз</item>
+        <item quantity="few">Встретить одного и того же друга %d раза</item>
+        <item quantity="many">Встретить одного и того же друга %d раз</item>
+        <item quantity="other">Встретить одного и того же друга %d раза</item>
+    </plurals>
+    <plurals name="ach_streak_title">
+        <item quantity="one">%d день подряд</item>
+        <item quantity="few">%d дня подряд</item>
+        <item quantity="many">%d дней подряд</item>
+        <item quantity="other">%d дня подряд</item>
+    </plurals>
+    <plurals name="ach_streak_desc">
+        <item quantity="one">Записывать встречи %d день подряд</item>
+        <item quantity="few">Записывать встречи %d дня подряд</item>
+        <item quantity="many">Записывать встречи %d дней подряд</item>
+        <item quantity="other">Записывать встречи %d дня подряд</item>
+    </plurals>
     <string name="dialog_clear_confirm">Очистить</string>
     <string name="cancel">Отмена</string>
 

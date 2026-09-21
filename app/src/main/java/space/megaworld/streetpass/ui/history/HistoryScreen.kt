@@ -12,6 +12,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -33,6 +36,7 @@ import space.megaworld.streetpass.data.db.EncounterRow
 import space.megaworld.streetpass.ui.AppViewModelProvider
 import space.megaworld.streetpass.ui.Format
 import space.megaworld.streetpass.ui.components.EncounterItem
+import space.megaworld.streetpass.ui.peer.PeerDialog
 
 data class HistorySection(val date: LocalDate, val rows: List<EncounterRow>)
 
@@ -66,6 +70,11 @@ fun HistoryScreen(
     viewModel: HistoryViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var selectedPeer by remember { mutableStateOf<String?>(null) }
+
+    selectedPeer?.let { peerId ->
+        PeerDialog(peerId = peerId, onDismiss = { selectedPeer = null })
+    }
 
     if (state.loaded && state.sections.isEmpty()) {
         Box(
@@ -100,7 +109,7 @@ fun HistoryScreen(
                 )
             }
             items(section.rows, key = { it.id }) { row ->
-                EncounterItem(row)
+                EncounterItem(row, onClick = { selectedPeer = row.peerId })
                 HorizontalDivider()
             }
         }

@@ -46,7 +46,7 @@
 
     <string name="identity_title">How others see you</string>
     <string name="identity_no_nickname">No nickname set — only the ID is broadcast. You can set one in Settings.</string>
-    <string name="identity_text">The ID is all your phone sends: 8 random bytes not tied to you, your account or your device. Other users count encounters with you by it. It can be changed in Settings.</string>
+    <string name="identity_text">The ID is all your phone sends: 8 bytes derived from a signing key that never leaves the phone, not tied to you, your account or your device. Every few minutes the phone also broadcasts a signature, so nobody can pose as you by copying the ID. It can be changed in Settings.</string>
 
     <!-- Encounter row -->
     <string name="first_meeting">First meeting</string>
@@ -81,6 +81,70 @@
         <item quantity="other">%d minutes</item>
     </plurals>
 
+    <!-- Peer dialog -->
+    <string name="peer_id_label">ID</string>
+    <string name="peer_first_seen">First seen: %1$s</string>
+    <string name="peer_last_seen">Last encounter: %1$s</string>
+    <string name="peer_friend_title">Friend</string>
+    <string name="peer_friend_sub">A mark on this phone only — the other person is not notified</string>
+    <string name="peer_alias_label">Name on this phone</string>
+    <string name="peer_alias_hint">Shown instead of the nickname or ID; stays on this phone</string>
+    <string name="peer_alias_save">Save</string>
+    <string name="friend_badge">Friend</string>
+
+    <!-- Friends -->
+    <string name="section_friends">Friends</string>
+    <string name="friends_empty">No friends yet. Tap a person in the history or in the list above to mark them as a friend.</string>
+    <string name="friend_since">friend since %1$s</string>
+
+    <!-- Achievements -->
+    <string name="section_achievements">Achievements</string>
+    <string name="ach_progress">%1$d / %2$d</string>
+    <string name="ach_unlocked_at">Unlocked %1$s</string>
+    <string name="ach_new_title">New achievement!</string>
+    <string name="ach_new_more">%1$s and %2$d more</string>
+    <string name="ach_new_dismiss">Nice</string>
+    <plurals name="ach_people_title">
+        <item quantity="one">%d person met</item>
+        <item quantity="other">%d people met</item>
+    </plurals>
+    <plurals name="ach_people_desc">
+        <item quantity="one">Meet %d person</item>
+        <item quantity="other">Meet %d different people</item>
+    </plurals>
+    <plurals name="ach_encounters_title">
+        <item quantity="one">%d encounter</item>
+        <item quantity="other">%d encounters</item>
+    </plurals>
+    <plurals name="ach_encounters_desc">
+        <item quantity="one">Record %d encounter</item>
+        <item quantity="other">Record %d encounters in total</item>
+    </plurals>
+    <plurals name="ach_friends_title">
+        <item quantity="one">%d friend</item>
+        <item quantity="other">%d friends</item>
+    </plurals>
+    <plurals name="ach_friends_desc">
+        <item quantity="one">Mark %d person as a friend</item>
+        <item quantity="other">Mark %d people as friends</item>
+    </plurals>
+    <plurals name="ach_friend_encounters_title">
+        <item quantity="one">Friend met %d time</item>
+        <item quantity="other">Friend met %d times</item>
+    </plurals>
+    <plurals name="ach_friend_encounters_desc">
+        <item quantity="one">Meet the same friend %d time</item>
+        <item quantity="other">Meet the same friend %d times</item>
+    </plurals>
+    <plurals name="ach_streak_title">
+        <item quantity="one">%d day in a row</item>
+        <item quantity="other">%d days in a row</item>
+    </plurals>
+    <plurals name="ach_streak_desc">
+        <item quantity="one">Record an encounter on %d day</item>
+        <item quantity="other">Record encounters on %d consecutive days</item>
+    </plurals>
+
     <!-- Settings: profile -->
     <string name="section_profile">Profile</string>
     <string name="nickname_label">Nickname</string>
@@ -95,6 +159,8 @@
     <string name="sw_advertise_sub">Lets other users count an encounter with you</string>
     <string name="sw_scan_title">Look for others</string>
     <string name="sw_scan_sub">Scan the air and record encounters</string>
+    <string name="sw_accept_unsigned_title">Accept unsigned IDs</string>
+    <string name="sw_accept_unsigned_sub">Count devices running older versions that do not sign their ID. While this is on, anyone can pose as another person by copying their ID.</string>
     <string name="sw_autostart_title">Start after reboot</string>
     <string name="sw_autostart_sub">If discovery was on, bring it back up when the system starts</string>
 
@@ -124,17 +190,17 @@
 
     <!-- Settings: privacy -->
     <string name="section_privacy">Privacy</string>
-    <string name="privacy_text">What is collected: the random 8-byte ID of each device met, its nickname if it broadcasts one, the time of the encounter and, if enabled below, the signal strength.\n\nWhat is not collected: location, MAC addresses, device names, contacts, anything about you. Everything stays on this phone: the app only goes online to check for updates when you ask it to, and it is excluded from cloud backup.</string>
+    <string name="privacy_text">What is collected: the anonymous 8-byte ID of each device met, its nickname if it broadcasts one, the time of the encounter and, if enabled below, the signal strength.\n\nWhat is not collected: location, MAC addresses, device names, contacts, anything about you. Everything stays on this phone: the app only goes online to check for updates when you ask it to, and it is excluded from cloud backup.</string>
     <string name="sw_store_rssi_title">Store signal strength</string>
     <string name="sw_store_rssi_sub">RSSI in the history helps judge how close the person was</string>
     <string name="your_id">Your ID</string>
     <string name="btn_change_id">Change ID</string>
     <string name="btn_clear_history">Clear history</string>
     <string name="dialog_regen_title">Change ID?</string>
-    <string name="dialog_regen_text">Other users will start seeing you as a new person: at the next encounter they will record a “first meeting”. Your own history is unaffected.</string>
+    <string name="dialog_regen_text">A new signing key will be created and other users will start seeing you as a new person: at the next encounter they will record a “first meeting”. Your own history is unaffected.</string>
     <string name="dialog_regen_confirm">Change</string>
     <string name="dialog_clear_title">Clear history?</string>
-    <string name="dialog_clear_text">All encounters and statistics will be deleted permanently. Discovery keeps running.</string>
+    <string name="dialog_clear_text">All encounters and statistics will be deleted permanently. Friends stay in the list with their counters reset; unlocked achievements are kept. Discovery keeps running.</string>
     <string name="dialog_clear_confirm">Clear</string>
     <string name="cancel">Cancel</string>
 

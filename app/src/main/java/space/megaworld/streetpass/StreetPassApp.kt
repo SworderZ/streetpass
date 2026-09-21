@@ -6,8 +6,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import space.megaworld.streetpass.ble.DiscoveryState
 import space.megaworld.streetpass.data.EncounterRepository
+import space.megaworld.streetpass.data.achievements.AchievementRepository
 import space.megaworld.streetpass.data.appDataStore
 import space.megaworld.streetpass.data.db.AppDatabase
 import space.megaworld.streetpass.data.identity.IdentityRepository
@@ -22,6 +24,10 @@ class StreetPassApp : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        // ID — производная от ключа подписи. Сверяем запись в DataStore с ключом сразу,
+        // чтобы UI не показывал устаревший ID до первого запуска сервиса (например,
+        // после обновления со сборки, где ID был просто случайными байтами).
+        container.applicationScope.launch { container.identityRepository.getOrCreate() }
     }
 }
 
@@ -38,6 +44,8 @@ class AppContainer(context: Context) {
     val identityRepository = IdentityRepository(context.appDataStore)
 
     val encounterRepository = EncounterRepository(database)
+
+    val achievementRepository = AchievementRepository(database)
 
     val updateRepository = UpdateRepository(
         context = context.applicationContext,

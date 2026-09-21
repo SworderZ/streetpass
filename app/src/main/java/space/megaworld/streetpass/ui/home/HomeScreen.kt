@@ -45,11 +45,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import space.megaworld.streetpass.AppContainer
 import space.megaworld.streetpass.R
 import space.megaworld.streetpass.ble.DiscoveryService
 import space.megaworld.streetpass.ble.DiscoveryState
 import space.megaworld.streetpass.core.Hex
+import space.megaworld.streetpass.data.achievements.Achievement
 import space.megaworld.streetpass.data.db.EncounterRow
 import space.megaworld.streetpass.ui.AppViewModelProvider
 import space.megaworld.streetpass.ui.Format
@@ -60,6 +62,8 @@ import space.megaworld.streetpass.ui.components.InfoTone
 import space.megaworld.streetpass.ui.components.SectionTitle
 import space.megaworld.streetpass.ui.components.StatTile
 import space.megaworld.streetpass.ui.components.StatusDot
+import space.megaworld.streetpass.ui.components.achievementTitle
+import space.megaworld.streetpass.ui.peer.PeerDialog
 
 data class HomeUiState(
     val discovery: DiscoveryState = DiscoveryState(),
@@ -71,6 +75,7 @@ data class HomeUiState(
     val totalPeers: Int = 0,
     val totalEncounters: Int = 0,
     val recent: List<EncounterRow> = emptyList(),
+    val newAchievements: List<Achievement> = emptyList(),
     val peerId: String = "",
     val nickname: String = "",
 )
@@ -87,6 +92,8 @@ class HomeViewModel(
     )
 
     private class Counts(val todayEncounters: Int, val todayPeople: Int, val totalPeers: Int, val totalEncounters: Int)
+
+    private class Feed(val recent: List<EncounterRow>, val newAchievements: List<Achievement>)
 
     private class Identity(val peerId: String, val nickname: String)
 
@@ -106,13 +113,18 @@ class HomeViewModel(
         container.identityRepository.nickname,
     ) { id, nickname -> Identity(id, nickname) }
 
+    private val feed = combine(
+        container.encounterRepository.recent(RECENT_LIMIT),
+        container.achievementRepository.unseen,
+    ) { recent, unseen -> Feed(recent, unseen) }
+
     val uiState: StateFlow<HomeUiState> = combine(
         counts,
-        container.encounterRepository.recent(RECENT_LIMIT),
+        feed,
         identity,
         container.discoveryState,
         environment,
-    ) { counts, recent, identity, discovery, env ->
+    ) { counts, feed, identity, discovery, env ->
         HomeUiState(
             discovery = discovery,
             permissionsGranted = env.permissionsGranted,
@@ -124,7 +136,8 @@ class HomeViewModel(
             todayPeople = counts.todayPeople,
             totalPeers = counts.totalPeers,
             totalEncounters = counts.totalEncounters,
-            recent = recent,
+            recent = feed.recent,
+            newAchievements = feed.newAchievements,
             peerId = identity.peerId,
             nickname = identity.nickname,
         )
@@ -137,6 +150,10 @@ class HomeViewModel(
 
     fun setDiscoveryEnabled(enabled: Boolean) {
         if (enabled) DiscoveryService.start(app) else DiscoveryService.stop(app)
+    }
+
+    fun dismissNewAchievements() {
+        viewModelScope.launch { container.achievementRepository.markSeen(System.currentTimeMillis()) }
     }
 
     private fun readEnvironment() = Environment(
@@ -163,6 +180,11 @@ fun HomeScreen(
     }
 
     var startAfterPermissions by remember { mutableStateOf(false) }
+    var selectedPeer by remember { mutableStateOf<String?>(null) }
+
+    selectedPeer?.let { peerId ->
+        PeerDialog(peerId = peerId, onDismiss = { selectedPeer = null })
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
@@ -206,6 +228,20 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { DiscoveryCard(state = state, onToggle = ::onToggle) }
+
+        if (state.newAchievements.isNotEmpty()) {
+            item {
+                val first = achievementTitle(state.newAchievements.first())
+                val rest = state.newAchievements.size - 1
+                InfoCard(
+                    title = stringResource(R.string.ach_new_title),
+                    text = if (rest == 0) first else stringResource(R.string.ach_new_more, first, rest),
+                    tone = InfoTone.NEUTRAL,
+                    actionLabel = stringResource(R.string.ach_new_dismiss),
+                    onAction = viewModel::dismissNewAchievements,
+                )
+            }
+        }
 
         if (!state.permissionsGranted) {
             item {
@@ -295,7 +331,7 @@ fun HomeScreen(
         } else {
             items(state.recent, key = { it.id }) { row ->
                 Column {
-                    EncounterItem(row)
+                    EncounterItem(row, onClick = { selectedPeer = row.peerId })
                     HorizontalDivider()
                 }
             }

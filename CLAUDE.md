@@ -22,7 +22,7 @@ Package: `space.megaworld.streetpass`
 ./gradlew installDebug           # установка на подключённое устройство
 ./gradlew lint                   # обязательно перед завершением задачи
 ./gradlew test                   # unit-тесты
-adb logcat -s DiscoveryService BleScanner BleAdvertiser
+adb logcat -s DiscoveryService BleScanner BleAdvertiser IdentityKeys IdentityRepository
 ```
 
 Если `gradlew` отсутствует: `gradle wrapper --gradle-version 8.9`.
@@ -45,8 +45,14 @@ adb logcat -s DiscoveryService BleScanner BleAdvertiser
 - Не подключать DI-фреймворк (Hilt/Koin) — используется `AppContainer` в
   `StreetPassApp`. Не заводить второй способ получения зависимостей.
 - Не использовать `runBlocking` в UI и в колбэках Bluetooth-стека.
-- Не менять `SERVICE_UUID`, `NICKNAME_UUID` и формат рекламных пакетов без явной
-  просьбы: это ломает совместимость с уже установленными сборками.
+- Не менять `SERVICE_UUID`, `NICKNAME_UUID`, `PROOF_UUID`, формат рекламных пакетов
+  и формат доказательства в `IdentityProof` (домен подписи, раскладка байт, кривая)
+  без явной просьбы: это ломает совместимость с уже установленными сборками.
+- ID — производная от ключа подписи (`IdentityKeys`), не случайные байты. Не
+  заводить второй источник ID и не подписывать ничего другим ключом.
+- Не переименовывать id достижений в `Achievement.ALL` — они лежат в базе.
+  Достижения считаются по базе через `AchievementRepository.check`, а не по
+  событиям: не заводить счётчики «в обход».
 
 ## Стиль
 

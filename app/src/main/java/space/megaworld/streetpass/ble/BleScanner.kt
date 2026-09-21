@@ -24,7 +24,7 @@ import space.megaworld.streetpass.core.Nicknames
  */
 class BleScanner(
     private val context: Context,
-    private val onSighting: (peerId: String, rssi: Int, nickname: String?) -> Unit,
+    private val onSighting: (peerId: String, rssi: Int, nickname: String?, proofFrame: ByteArray?) -> Unit,
 ) {
 
     private val _scanning = MutableStateFlow(false)
@@ -118,9 +118,11 @@ class BleScanner(
         val record = result.scanRecord ?: return
         val data = record.getServiceData(BleConstants.SERVICE_UUID) ?: return
         if (data.size != BleConstants.PEER_ID_BYTES) return
-        // Ник есть только если стек успел получить scan-response; иначе null.
+        // Ник и кусок доказательства есть только если стек успел получить scan-response,
+        // и в одном пакете приходит что-то одно — кадры чередуются на стороне передатчика.
         val nickname = record.getServiceData(BleConstants.NICKNAME_UUID)?.let(Nicknames::decode)
-        onSighting(Hex.encode(data), result.rssi, nickname)
+        val proofFrame = record.getServiceData(BleConstants.PROOF_UUID)
+        onSighting(Hex.encode(data), result.rssi, nickname, proofFrame)
     }
 
     private fun adapter(): BluetoothAdapter? = context.getSystemService<BluetoothManager>()?.adapter

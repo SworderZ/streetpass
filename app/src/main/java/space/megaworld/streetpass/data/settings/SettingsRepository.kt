@@ -22,6 +22,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val COOLDOWN_MINUTES = intPreferencesKey("cooldown_minutes")
         val MIN_RSSI = intPreferencesKey("min_rssi")
         val STORE_RSSI = booleanPreferencesKey("store_rssi")
+        val ACCEPT_UNSIGNED = booleanPreferencesKey("accept_unsigned")
         val DISCOVERY_ACTIVE = booleanPreferencesKey("discovery_active")
     }
 
@@ -49,6 +50,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun setStoreRssi(value: Boolean) = edit { it[Keys.STORE_RSSI] = value }
 
+    suspend fun setAcceptUnsigned(value: Boolean) = edit { it[Keys.ACCEPT_UNSIGNED] = value }
+
     suspend fun setDiscoveryActive(value: Boolean) = edit { it[Keys.DISCOVERY_ACTIVE] = value }
 
     private suspend fun edit(block: (MutablePreferences) -> Unit) {
@@ -68,6 +71,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                 .coerceIn(AppSettings.COOLDOWN_RANGE),
             minRssi = (this[Keys.MIN_RSSI] ?: defaults.minRssi).coerceIn(AppSettings.RSSI_RANGE),
             storeRssi = this[Keys.STORE_RSSI] ?: defaults.storeRssi,
+            acceptUnsigned = this[Keys.ACCEPT_UNSIGNED] ?: defaults.acceptUnsigned,
             discoveryActive = this[Keys.DISCOVERY_ACTIVE] ?: defaults.discoveryActive,
         )
     }

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import space.megaworld.streetpass.StreetPassApp
 import space.megaworld.streetpass.ui.history.HistoryViewModel
 import space.megaworld.streetpass.ui.home.HomeViewModel
+import space.megaworld.streetpass.ui.peer.PeerViewModel
 import space.megaworld.streetpass.ui.settings.SettingsViewModel
 import space.megaworld.streetpass.ui.stats.StatsViewModel
 
@@ -17,6 +18,7 @@ object AppViewModelProvider {
         initializer { HistoryViewModel(app().container) }
         initializer { StatsViewModel(app().container) }
         initializer { SettingsViewModel(app().container, app()) }
+        initializer { PeerViewModel(app().container) }
     }
 
     private fun CreationExtras.app(): StreetPassApp =

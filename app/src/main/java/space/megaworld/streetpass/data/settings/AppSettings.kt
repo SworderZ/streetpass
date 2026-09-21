@@ -8,6 +8,8 @@ data class AppSettings(
     val cooldownMinutes: Int = DEFAULT_COOLDOWN_MINUTES,
     val minRssi: Int = DEFAULT_MIN_RSSI,
     val storeRssi: Boolean = true,
+    /** Засчитывать ID без подписи — совместимость со сборками до появления подписи, ценой защиты от копирования. */
+    val acceptUnsigned: Boolean = false,
     /** Было ли обнаружение включено пользователем — нужно для восстановления после перезагрузки. */
     val discoveryActive: Boolean = false,
 ) {

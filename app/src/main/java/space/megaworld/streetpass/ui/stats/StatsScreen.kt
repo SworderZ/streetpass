@@ -1,5 +1,6 @@
 package space.megaworld.streetpass.ui.stats
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,12 +11,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -32,14 +37,17 @@ import kotlinx.coroutines.flow.stateIn
 import space.megaworld.streetpass.AppContainer
 import space.megaworld.streetpass.R
 import space.megaworld.streetpass.data.DailyCount
+import space.megaworld.streetpass.data.achievements.AchievementProgress
 import space.megaworld.streetpass.data.db.PeerEntity
 import space.megaworld.streetpass.ui.AppViewModelProvider
 import space.megaworld.streetpass.ui.Format
+import space.megaworld.streetpass.ui.components.AchievementTile
 import space.megaworld.streetpass.ui.components.BarColumn
 import space.megaworld.streetpass.ui.components.LabeledRow
 import space.megaworld.streetpass.ui.components.PeerName
 import space.megaworld.streetpass.ui.components.SectionTitle
 import space.megaworld.streetpass.ui.components.StatTile
+import space.megaworld.streetpass.ui.peer.PeerDialog
 
 data class StatsUiState(
     val todayEncounters: Int = 0,
@@ -50,6 +58,8 @@ data class StatsUiState(
     val totalEncounters: Int = 0,
     val totalPeers: Int = 0,
     val topPeers: List<PeerEntity> = emptyList(),
+    val friends: List<PeerEntity> = emptyList(),
+    val achievements: List<AchievementProgress> = emptyList(),
 ) {
     val averagePerPerson: String
         get() = if (totalPeers == 0) "—" else Format.decimal(totalEncounters.toFloat() / totalPeers)
@@ -61,7 +71,7 @@ class StatsViewModel(container: AppContainer) : ViewModel() {
 
     private class Week(val encounters: Int, val people: Int, val daily: List<DailyCount>)
 
-    private class Total(val encounters: Int, val peers: Int, val top: List<PeerEntity>)
+    private class Total(val encounters: Int, val peers: Int, val top: List<PeerEntity>, val friends: List<PeerEntity>)
 
     private val repository = container.encounterRepository
 
@@ -71,11 +81,19 @@ class StatsViewModel(container: AppContainer) : ViewModel() {
         Week(e, p, d)
     }
 
-    private val total = combine(repository.totalEncounters, repository.totalPeers, repository.topPeers(TOP_LIMIT)) { e, p, t ->
-        Total(e, p, t)
-    }
+    private val total = combine(
+        repository.totalEncounters,
+        repository.totalPeers,
+        repository.topPeers(TOP_LIMIT),
+        repository.friends,
+    ) { e, p, t, f -> Total(e, p, t, f) }
 
-    val uiState: StateFlow<StatsUiState> = combine(today, week, total) { today, week, total ->
+    val uiState: StateFlow<StatsUiState> = combine(
+        today,
+        week,
+        total,
+        container.achievementRepository.progress,
+    ) { today, week, total, achievements ->
         StatsUiState(
             todayEncounters = today.encounters,
             todayPeople = today.people,
@@ -85,6 +103,8 @@ class StatsViewModel(container: AppContainer) : ViewModel() {
             totalEncounters = total.encounters,
             totalPeers = total.peers,
             topPeers = total.top,
+            friends = total.friends,
+            achievements = achievements,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsUiState())
 
@@ -98,6 +118,11 @@ fun StatsScreen(
     viewModel: StatsViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var selectedPeer by remember { mutableStateOf<String?>(null) }
+
+    selectedPeer?.let { peerId ->
+        PeerDialog(peerId = peerId, onDismiss = { selectedPeer = null })
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -145,13 +170,70 @@ fun StatsScreen(
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
                         state.topPeers.forEachIndexed { index, peer ->
-                            TopPeerRow(index + 1, peer)
+                            TopPeerRow(index + 1, peer, onClick = { selectedPeer = peer.peerId })
                             if (index != state.topPeers.lastIndex) HorizontalDivider()
                         }
                     }
                 }
             }
         }
+
+        item {
+            SectionTitle(stringResource(R.string.section_friends))
+            if (state.friends.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.friends_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                        state.friends.forEachIndexed { index, peer ->
+                            FriendRow(peer, onClick = { selectedPeer = peer.peerId })
+                            if (index != state.friends.lastIndex) HorizontalDivider()
+                        }
+                    }
+                }
+            }
+        }
+
+        item { SectionTitle(stringResource(R.string.section_achievements)) }
+        // Сетка из двух колонок внутри LazyColumn: LazyVerticalGrid сюда не вложить,
+        // а достижений немного, так что строки по две плитки — самое простое.
+        items(state.achievements.chunked(2)) { pair ->
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                pair.forEach { AchievementTile(it, Modifier.weight(1f)) }
+                if (pair.size == 1) Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun FriendRow(peer: PeerEntity, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            PeerName(nickname = peer.nickname, peerId = peer.peerId, alias = peer.alias, friend = true)
+            peer.friendSince?.let { since ->
+                Text(
+                    text = stringResource(R.string.friend_since, Format.dateTime(since)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Text(
+            text = pluralStringResource(R.plurals.encounters_count, peer.encounterCount, peer.encounterCount),
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 
@@ -180,16 +262,23 @@ private fun WeekChart(daily: List<DailyCount>) {
 }
 
 @Composable
-private fun TopPeerRow(position: Int, peer: PeerEntity) {
+private fun TopPeerRow(position: Int, peer: PeerEntity, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            PeerName(nickname = peer.nickname, peerId = peer.peerId, prefix = "$position. ")
+            PeerName(
+                nickname = peer.nickname,
+                peerId = peer.peerId,
+                alias = peer.alias,
+                friend = peer.isFriend,
+                prefix = "$position. ",
+            )
             Text(
                 text = stringResource(R.string.top_last, Format.dateTime(peer.lastEncounterAt)),
                 style = MaterialTheme.typography.bodySmall,

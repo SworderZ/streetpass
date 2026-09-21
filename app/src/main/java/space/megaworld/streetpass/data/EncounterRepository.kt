@@ -7,6 +7,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import space.megaworld.streetpass.core.Nicknames
 import space.megaworld.streetpass.core.TimeRanges
 import space.megaworld.streetpass.data.db.AppDatabase
 import space.megaworld.streetpass.data.db.EncounterEntity
@@ -140,10 +141,29 @@ class EncounterRepository(
 
     fun topPeers(limit: Int): Flow<List<PeerEntity>> = peers.top(limit)
 
+    fun peer(peerId: String): Flow<PeerEntity?> = peers.observe(peerId)
+
+    val friends: Flow<List<PeerEntity>> = peers.friends()
+
+    /** Метка «друг» — локальная: другой человек о ней не узнаёт, в эфир ничего не уходит. */
+    suspend fun setFriend(peerId: String, friend: Boolean, now: Long) {
+        peers.setFriendSince(peerId, if (friend) now else null)
+    }
+
+    /** Локальное имя peer'а; чистится теми же правилами, что и ник, пустое — снимает имя. */
+    suspend fun setAlias(peerId: String, alias: String) {
+        peers.setAlias(peerId, Nicknames.sanitize(alias).ifEmpty { null })
+    }
+
+    /**
+     * Очистка истории. Друзья — список, который пользователь собирал руками, поэтому они
+     * остаются, но с обнулёнными счётчиками; достижения хранятся отдельно и не трогаются.
+     */
     suspend fun clearAll() {
         db.withTransaction {
             encounters.deleteAll()
-            peers.deleteAll()
+            peers.deleteNonFriends()
+            peers.resetFriends()
         }
     }
 

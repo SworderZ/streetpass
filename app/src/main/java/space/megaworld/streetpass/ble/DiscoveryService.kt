@@ -39,7 +39,9 @@ import space.megaworld.streetpass.R
 import space.megaworld.streetpass.StreetPassApp
 import space.megaworld.streetpass.core.BleConstants
 import space.megaworld.streetpass.core.Hex
+import space.megaworld.streetpass.core.IdentityProof
 import space.megaworld.streetpass.core.Nicknames
+import space.megaworld.streetpass.core.PeerVerifier
 import space.megaworld.streetpass.data.SightingResult
 import space.megaworld.streetpass.data.settings.AppSettings
 
@@ -60,7 +62,13 @@ data class DiscoveryState(
  */
 class DiscoveryService : Service() {
 
-    private class Sighting(val peerId: String, val rssi: Int, val nickname: String?, val at: Long)
+    private class Sighting(
+        val peerId: String,
+        val rssi: Int,
+        val nickname: String?,
+        val proofFrame: ByteArray?,
+        val at: Long,
+    )
 
     private lateinit var container: AppContainer
     private lateinit var advertiser: BleAdvertiser
@@ -74,6 +82,9 @@ class DiscoveryService : Service() {
 
     /** Дебаунс: последний принятый пакет по peerId. Читается и пишется только из consumer-корутины. */
     private val lastSeen = HashMap<String, Long>()
+
+    /** Сборка и проверка подписей ID. Читается и пишется только из consumer-корутины. */
+    private val verifier = PeerVerifier()
 
     private val serviceError = MutableStateFlow<String?>(null)
 
@@ -110,9 +121,9 @@ class DiscoveryService : Service() {
     override fun onCreate() {
         super.onCreate()
         container = (application as StreetPassApp).container
-        advertiser = BleAdvertiser(this)
-        scanner = BleScanner(this) { peerId, rssi, nickname ->
-            sightings.trySend(Sighting(peerId, rssi, nickname, System.currentTimeMillis()))
+        advertiser = BleAdvertiser(this, scope)
+        scanner = BleScanner(this) { peerId, rssi, nickname, proofFrame ->
+            sightings.trySend(Sighting(peerId, rssi, nickname, proofFrame, System.currentTimeMillis()))
         }
         createNotificationChannel()
 
@@ -224,7 +235,9 @@ class DiscoveryService : Service() {
 
             if (current.advertiseEnabled) {
                 val nickname = container.identityRepository.currentNickname()
-                advertiser.start(Hex.decode(ownId), Nicknames.encode(nickname))
+                advertiser.start(Hex.decode(ownId), Nicknames.encode(nickname)) {
+                    container.identityRepository.proof(System.currentTimeMillis())
+                }
             }
             if (!current.scanEnabled) return@launch
 
@@ -252,6 +265,19 @@ class DiscoveryService : Service() {
         if (sighting.peerId == ownId) return
         state.update { it.copy(lastSightingAt = sighting.at) }
 
+        // Куски подписи собираем из каждого пакета, ещё до дебаунса: иначе за одно окно
+        // сканирования дошёл бы только один кусок из четырёх.
+        sighting.proofFrame?.let { frame ->
+            when (val result = verifier.onFrame(sighting.peerId, frame, sighting.at)) {
+                is IdentityProof.Result.Verified -> Log.d(TAG, "proof verified for ${Hex.short(sighting.peerId)}")
+                is IdentityProof.Result.Rejected -> Log.w(TAG, "proof rejected for ${Hex.short(sighting.peerId)}: ${result.reason}")
+                null -> Unit
+            }
+        }
+        // Без подтверждённой подписи ID мог быть скопирован с чужого эфира — в базу не пускаем.
+        // Исключение — явно разрешённая совместимость со сборками без подписи.
+        if (!verifier.isTrusted(sighting.peerId, sighting.at) && !settings.acceptUnsigned) return
+
         val previous = lastSeen[sighting.peerId]
         if (previous != null && sighting.at - previous < BleConstants.DEBOUNCE_WINDOW_MS) return
         lastSeen[sighting.peerId] = sighting.at
@@ -276,6 +302,13 @@ class DiscoveryService : Service() {
         }
         if (result is SightingResult.Registered) {
             Log.d(TAG, "encounter ${Hex.short(result.peerId)} first=${result.firstMeeting}")
+            // Достижения пересчитываются по базе, а не по событию: повторный вызов безвреден.
+            try {
+                container.achievementRepository.check(sighting.at)
+                    .forEach { Log.d(TAG, "achievement unlocked: ${it.id}") }
+            } catch (e: SQLException) {
+                Log.e(TAG, "failed to check achievements", e)
+            }
         }
     }
 

@@ -111,6 +111,10 @@ class SettingsViewModel(
         viewModelScope.launch { container.settingsRepository.setStoreRssi(value) }
     }
 
+    fun setAcceptUnsigned(value: Boolean) {
+        viewModelScope.launch { container.settingsRepository.setAcceptUnsigned(value) }
+    }
+
     fun clearHistory() {
         viewModelScope.launch { container.encounterRepository.clearAll() }
     }
@@ -181,6 +185,13 @@ fun SettingsScreen(
                         subtitle = stringResource(R.string.sw_scan_sub),
                         checked = settings.scanEnabled,
                         onChange = viewModel::setScanEnabled,
+                    )
+                    HorizontalDivider()
+                    SwitchRow(
+                        title = stringResource(R.string.sw_accept_unsigned_title),
+                        subtitle = stringResource(R.string.sw_accept_unsigned_sub),
+                        checked = settings.acceptUnsigned,
+                        onChange = viewModel::setAcceptUnsigned,
                     )
                     HorizontalDivider()
                     SwitchRow(
