@@ -6,6 +6,7 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -51,14 +52,17 @@ import space.megaworld.streetpass.R
 import space.megaworld.streetpass.ble.DiscoveryService
 import space.megaworld.streetpass.ble.DiscoveryState
 import space.megaworld.streetpass.core.Hex
+import space.megaworld.streetpass.data.EncounterRepository
 import space.megaworld.streetpass.data.achievements.Achievement
 import space.megaworld.streetpass.data.db.EncounterRow
+import space.megaworld.streetpass.data.db.PeerEntity
 import space.megaworld.streetpass.ui.AppViewModelProvider
 import space.megaworld.streetpass.ui.Format
 import space.megaworld.streetpass.ui.Permissions
 import space.megaworld.streetpass.ui.components.EncounterItem
 import space.megaworld.streetpass.ui.components.InfoCard
 import space.megaworld.streetpass.ui.components.InfoTone
+import space.megaworld.streetpass.ui.components.PeerName
 import space.megaworld.streetpass.ui.components.SectionTitle
 import space.megaworld.streetpass.ui.components.StatTile
 import space.megaworld.streetpass.ui.components.StatusDot
@@ -75,6 +79,7 @@ data class HomeUiState(
     val totalPeers: Int = 0,
     val totalEncounters: Int = 0,
     val recent: List<EncounterRow> = emptyList(),
+    val nearby: List<PeerEntity> = emptyList(),
     val newAchievements: List<Achievement> = emptyList(),
     val peerId: String = "",
     val nickname: String = "",
@@ -93,7 +98,7 @@ class HomeViewModel(
 
     private class Counts(val todayEncounters: Int, val todayPeople: Int, val totalPeers: Int, val totalEncounters: Int)
 
-    private class Feed(val recent: List<EncounterRow>, val newAchievements: List<Achievement>)
+    private class Feed(val recent: List<EncounterRow>, val nearby: List<PeerEntity>, val newAchievements: List<Achievement>)
 
     private class Identity(val peerId: String, val nickname: String)
 
@@ -115,8 +120,9 @@ class HomeViewModel(
 
     private val feed = combine(
         container.encounterRepository.recent(RECENT_LIMIT),
+        container.encounterRepository.nearby,
         container.achievementRepository.unseen,
-    ) { recent, unseen -> Feed(recent, unseen) }
+    ) { recent, nearby, unseen -> Feed(recent, nearby, unseen) }
 
     val uiState: StateFlow<HomeUiState> = combine(
         counts,
@@ -137,6 +143,7 @@ class HomeViewModel(
             totalPeers = counts.totalPeers,
             totalEncounters = counts.totalEncounters,
             recent = feed.recent,
+            nearby = feed.nearby,
             newAchievements = feed.newAchievements,
             peerId = identity.peerId,
             nickname = identity.nickname,
@@ -309,6 +316,29 @@ fun HomeScreen(
             }
         }
 
+        // Пока обнаружение работает, секция видна всегда — пустая она тоже информативна.
+        if (state.discovery.running || state.nearby.isNotEmpty()) {
+            item {
+                SectionTitle(stringResource(R.string.nearby_title))
+                if (state.nearby.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.nearby_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                            state.nearby.forEachIndexed { index, peer ->
+                                NearbyRow(peer = peer, onClick = { selectedPeer = peer.peerId })
+                                if (index != state.nearby.lastIndex) HorizontalDivider()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -338,6 +368,37 @@ fun HomeScreen(
         }
 
         item { IdentityCard(peerId = state.peerId, nickname = state.nickname) }
+    }
+}
+
+@Composable
+private fun NearbyRow(peer: PeerEntity, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            PeerName(nickname = peer.nickname, peerId = peer.peerId, alias = peer.alias, friend = peer.isFriend)
+            Text(
+                text = stringResource(R.string.nearby_seen, Format.timeWithSeconds(peer.lastSeenAt)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (peer.lastRssi != EncounterRepository.RSSI_NOT_STORED) {
+            Column(horizontalAlignment = Alignment.End) {
+                Text(text = stringResource(R.string.rssi_dbm, peer.lastRssi), style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = stringResource(Format.rssiDistanceHintRes(peer.lastRssi)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

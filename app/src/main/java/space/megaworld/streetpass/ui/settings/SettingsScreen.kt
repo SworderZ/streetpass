@@ -115,6 +115,10 @@ class SettingsViewModel(
         viewModelScope.launch { container.settingsRepository.setAcceptUnsigned(value) }
     }
 
+    fun setNotifyFriends(value: Boolean) {
+        viewModelScope.launch { container.settingsRepository.setNotifyFriends(value) }
+    }
+
     fun clearHistory() {
         viewModelScope.launch { container.encounterRepository.clearAll() }
     }
@@ -195,6 +199,13 @@ fun SettingsScreen(
                         subtitle = stringResource(R.string.sw_accept_unsigned_sub),
                         checked = settings.acceptUnsigned,
                         onChange = viewModel::setAcceptUnsigned,
+                    )
+                    HorizontalDivider()
+                    SwitchRow(
+                        title = stringResource(R.string.sw_notify_friends_title),
+                        subtitle = stringResource(R.string.sw_notify_friends_sub),
+                        checked = settings.notifyFriends,
+                        onChange = viewModel::setNotifyFriends,
                     )
                     HorizontalDivider()
                     SwitchRow(

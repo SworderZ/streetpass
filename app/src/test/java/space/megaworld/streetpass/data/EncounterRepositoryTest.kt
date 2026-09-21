@@ -132,6 +132,17 @@ class EncounterRepositoryTest {
     }
 
     @Test
+    fun nearbyListsOnlyRecentlySeenPeers() = runBlocking {
+        val now = System.currentTimeMillis()
+        sight(now = now - EncounterRepository.NEARBY_WINDOW_MS - minute, peerId = "fedcba9876543210")
+        sight(now = now - minute)
+
+        val nearby = repository.nearby.first().map { it.peerId }
+
+        assertEquals(listOf(peer), nearby)
+    }
+
+    @Test
     fun ordinalInHistoryCountsPerPeer() = runBlocking {
         val other = "fedcba9876543210"
         sight(now = t0, cooldownMinutes = 5)

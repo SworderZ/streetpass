@@ -10,6 +10,8 @@ data class AppSettings(
     val storeRssi: Boolean = true,
     /** Засчитывать ID без подписи — совместимость со сборками до появления подписи, ценой защиты от копирования. */
     val acceptUnsigned: Boolean = false,
+    /** Отдельное уведомление, когда встречен друг. */
+    val notifyFriends: Boolean = true,
     /** Было ли обнаружение включено пользователем — нужно для восстановления после перезагрузки. */
     val discoveryActive: Boolean = false,
 ) {

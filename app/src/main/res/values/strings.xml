@@ -40,6 +40,9 @@
     <string name="tile_total_people">unique people</string>
     <string name="tile_total_encounters">encounters total</string>
 
+    <string name="nearby_title">Nearby now</string>
+    <string name="nearby_empty">Nobody nearby right now. People appear here for a few minutes after their signal is received.</string>
+    <string name="nearby_seen">signal at %1$s</string>
     <string name="recent_title">Recent encounters</string>
     <string name="recent_all">Full history</string>
     <string name="recent_empty">No encounters yet. Turn discovery on and keep your phone with you — other StreetPass users will show up here.</string>
@@ -186,6 +189,8 @@
     <string name="sw_scan_sub">Scan the air and record encounters</string>
     <string name="sw_accept_unsigned_title">Accept unsigned IDs</string>
     <string name="sw_accept_unsigned_sub">Count devices running older versions that do not sign their ID. While this is on, anyone can pose as another person by copying their ID.</string>
+    <string name="sw_notify_friends_title">Notify about friends</string>
+    <string name="sw_notify_friends_sub">A separate notification when an encounter with a friend is recorded</string>
     <string name="sw_autostart_title">Start after reboot</string>
     <string name="sw_autostart_sub">If discovery was on, bring it back up when the system starts</string>
 
@@ -263,6 +268,18 @@
     <string name="notif_channel_desc">Persistent notification while discovery is running</string>
     <string name="notif_text">Encounters today: %1$d</string>
     <string name="notif_stop">Turn off</string>
+    <string name="notif_friend_channel_name">Friends nearby</string>
+    <string name="notif_friend_channel_desc">An encounter with someone from your friends list</string>
+    <string name="notif_friend_title">%1$s is nearby</string>
+    <string name="notif_friend_text">Encounter recorded</string>
+
+    <!-- Widget -->
+    <string name="widget_description">Encounters today</string>
+    <string name="widget_label">encounters today</string>
+    <plurals name="people_count">
+        <item quantity="one">%d person</item>
+        <item quantity="other">%d people</item>
+    </plurals>
     <string name="err_bt_off_service">Bluetooth is off. Turn it on — discovery will resume automatically.</string>
     <string name="err_fgs_permission">Could not start the background service: Bluetooth permissions are missing</string>
     <string name="err_fgs_not_allowed">The system refused to start the background service: %1$s</string>

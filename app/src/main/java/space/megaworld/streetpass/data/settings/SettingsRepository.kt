@@ -23,6 +23,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val MIN_RSSI = intPreferencesKey("min_rssi")
         val STORE_RSSI = booleanPreferencesKey("store_rssi")
         val ACCEPT_UNSIGNED = booleanPreferencesKey("accept_unsigned")
+        val NOTIFY_FRIENDS = booleanPreferencesKey("notify_friends")
         val DISCOVERY_ACTIVE = booleanPreferencesKey("discovery_active")
     }
 
@@ -52,6 +53,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun setAcceptUnsigned(value: Boolean) = edit { it[Keys.ACCEPT_UNSIGNED] = value }
 
+    suspend fun setNotifyFriends(value: Boolean) = edit { it[Keys.NOTIFY_FRIENDS] = value }
+
     suspend fun setDiscoveryActive(value: Boolean) = edit { it[Keys.DISCOVERY_ACTIVE] = value }
 
     private suspend fun edit(block: (MutablePreferences) -> Unit) {
@@ -72,6 +75,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             minRssi = (this[Keys.MIN_RSSI] ?: defaults.minRssi).coerceIn(AppSettings.RSSI_RANGE),
             storeRssi = this[Keys.STORE_RSSI] ?: defaults.storeRssi,
             acceptUnsigned = this[Keys.ACCEPT_UNSIGNED] ?: defaults.acceptUnsigned,
+            notifyFriends = this[Keys.NOTIFY_FRIENDS] ?: defaults.notifyFriends,
             discoveryActive = this[Keys.DISCOVERY_ACTIVE] ?: defaults.discoveryActive,
         )
     }

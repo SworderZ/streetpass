@@ -292,6 +292,21 @@ Notification: channel `IMPORTANCE_LOW`, no vibration, `setOngoing(true)`,
 `setSilent(true)`, text "Encounters today: N", action "Turn off", tap opens the
 app.
 
+A second channel `friends` (`IMPORTANCE_DEFAULT`): when a registered encounter
+is with a peer marked as a friend, a separate "<name> is nearby" notification
+is posted (id derived from peerId, auto-cancel). It fires at most once per
+duplicate-protection window per friend because it follows `Registered`, not
+raw packets. Off via the "Notify about friends" setting; skipped when
+notifications are disabled.
+
+### 7.3 Home screen widget
+
+`TodayWidgetProvider` (RemoteViews, no Glance): encounters today + people
+today, tap opens the app. Refreshed by the service on every change of the
+today counter and by the system every 30 minutes (`updatePeriodMillis`), so
+the number does not stay stale past midnight when discovery is off. Refresh
+is skipped when no widget instance exists.
+
 ### 7.1 Duty cycle
 
 Continuous scanning drains the battery. Profiles:
@@ -354,6 +369,10 @@ the selected tab is enough.
   the last received signal.
 - Warnings: no permissions / Bluetooth off / BLE error — with an action button.
 - Tiles: encounters today, people today, unique people total, encounters total.
+- "Nearby now": peers whose packet was accepted in the last 3 minutes
+  (`peers.lastSeenAt`, re-queried every 15 s so people drop off without new
+  writes), with the last RSSI and distance hint; shown whenever discovery is
+  running. Tap opens the peer dialog.
 - Last 5 encounters, link to the history; tap on a row opens the peer dialog.
 - "New achievement" card while there are unseen unlocks, with a dismiss button.
 - Own anonymous ID with an explanation of what it means.
@@ -387,7 +406,7 @@ per app (`localeConfig`). Dates and numbers are formatted for
 - Profile: nickname field with a byte counter, "Save" button, a warning that the
   nickname is visible to any scanner.
 - Discovery: broadcast my ID / look for others / accept unsigned IDs (off by
-  default) / start after reboot.
+  default) / notify about friends (on by default) / start after reboot.
 - Power profile: three radio buttons with descriptions.
 - Duplicate protection: slider 5 min – 12 h.
 - RSSI threshold: slider −100…−40 dBm with a distance hint.
@@ -426,6 +445,7 @@ ui/theme/      Theme
 ui/components/ StatTile, StatusDot, LabeledRow, BarColumn, SectionTitle, AchievementTile, EncounterItem
 ui/peer/       PeerDialog + PeerViewModel (opened from several screens)
 ui/friends/    FriendInvites (my QR, scanner dialog, confirmation) + QrScanner (CameraX)
+ui/widget/     TodayWidgetProvider (home screen widget)
 ui/home|history|stats|settings/   screen + its ViewModel in one file
 ```
 

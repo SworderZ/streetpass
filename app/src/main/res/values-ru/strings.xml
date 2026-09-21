@@ -40,6 +40,9 @@
     <string name="tile_total_people">уникальных всего</string>
     <string name="tile_total_encounters">встреч всего</string>
 
+    <string name="nearby_title">Сейчас рядом</string>
+    <string name="nearby_empty">Рядом никого. Люди появляются здесь на несколько минут после приёма их сигнала.</string>
+    <string name="nearby_seen">сигнал в %1$s</string>
     <string name="recent_title">Последние встречи</string>
     <string name="recent_all">Вся история</string>
     <string name="recent_empty">Пока ни одной встречи. Включите обнаружение и носите телефон с собой — другие пользователи StreetPass появятся здесь.</string>
@@ -107,6 +110,8 @@
     <string name="sw_scan_sub">Сканировать эфир и записывать встречи</string>
     <string name="sw_accept_unsigned_title">Принимать неподписанные ID</string>
     <string name="sw_accept_unsigned_sub">Считать устройства со старыми версиями, которые не подписывают ID. Пока включено, любой может выдать себя за другого, скопировав его ID.</string>
+    <string name="sw_notify_friends_title">Уведомлять о друзьях</string>
+    <string name="sw_notify_friends_sub">Отдельное уведомление, когда записана встреча с другом</string>
     <string name="sw_autostart_title">Автозапуск после перезагрузки</string>
     <string name="sw_autostart_sub">Если обнаружение было включено, поднять его при старте системы</string>
 
@@ -289,6 +294,20 @@
     <string name="notif_channel_desc">Постоянное уведомление, пока работает обнаружение</string>
     <string name="notif_text">Встреч сегодня: %1$d</string>
     <string name="notif_stop">Выключить</string>
+    <string name="notif_friend_channel_name">Друзья рядом</string>
+    <string name="notif_friend_channel_desc">Встреча с человеком из списка друзей</string>
+    <string name="notif_friend_title">%1$s рядом</string>
+    <string name="notif_friend_text">Встреча записана</string>
+
+    <!-- Widget -->
+    <string name="widget_description">Встречи за сегодня</string>
+    <string name="widget_label">встреч сегодня</string>
+    <plurals name="people_count">
+        <item quantity="one">%d человек</item>
+        <item quantity="few">%d человека</item>
+        <item quantity="many">%d человек</item>
+        <item quantity="other">%d человека</item>
+    </plurals>
     <string name="err_bt_off_service">Bluetooth выключен. Включите его — обнаружение продолжится автоматически.</string>
     <string name="err_fgs_permission">Не удалось запустить фоновый сервис: нет разрешений Bluetooth</string>
     <string name="err_fgs_not_allowed">Система запретила запуск фонового сервиса: %1$s</string>

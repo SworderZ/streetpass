@@ -75,6 +75,9 @@ old ones — keep a backup.
   behind a wall — are dropped by an RSSI threshold.
 - All of this is done by a foreground service with a persistent notification; scanning
   runs in cycles (power profiles in the settings).
+- Home shows "Nearby now" — whoever was heard in the last few minutes, with signal
+  strength. When a friend is met, a separate notification is posted (can be turned off
+  in Settings → Discovery). A home screen widget shows today's encounter count.
 - Tap any person in the history to mark them as a friend or give them a name. Both are
   local marks — the other person is not notified and nothing goes over the air.
 - Friends can also be added by invite (Stats → Friends): "My invite" shows a QR code

@@ -16,6 +16,7 @@ import android.database.SQLException
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
@@ -44,6 +45,8 @@ import space.megaworld.streetpass.core.Nicknames
 import space.megaworld.streetpass.core.PeerVerifier
 import space.megaworld.streetpass.data.SightingResult
 import space.megaworld.streetpass.data.settings.AppSettings
+import space.megaworld.streetpass.ui.components.displayName
+import space.megaworld.streetpass.ui.widget.TodayWidgetProvider
 
 data class DiscoveryState(
     val running: Boolean = false,
@@ -149,6 +152,7 @@ class DiscoveryService : Service() {
             container.encounterRepository.todayEncounters.collect { count ->
                 todayCount = count
                 if (state.value.running) updateNotification()
+                TodayWidgetProvider.refresh(this@DiscoveryService)
             }
         }
         scope.launch(Dispatchers.IO) {
@@ -306,9 +310,42 @@ class DiscoveryService : Service() {
             try {
                 container.achievementRepository.check(sighting.at)
                     .forEach { Log.d(TAG, "achievement unlocked: ${it.id}") }
+                if (cfg.notifyFriends) notifyFriendIfNeeded(result.peerId)
             } catch (e: SQLException) {
                 Log.e(TAG, "failed to check achievements", e)
             }
+        }
+    }
+
+    /**
+     * Зачтённая встреча с другом — отдельное уведомление. Registered приходит не чаще
+     * окна антидубля, так что уведомление не спамит; id по peerId — у каждого друга своё.
+     */
+    private suspend fun notifyFriendIfNeeded(peerId: String) {
+        val peer = container.encounterRepository.peerOnce(peerId) ?: return
+        if (!peer.isFriend) return
+        val manager = NotificationManagerCompat.from(this)
+        if (!manager.areNotificationsEnabled()) return
+        val name = displayName(peer.alias, peer.nickname, peer.peerId)
+        val openApp = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val notification = NotificationCompat.Builder(this, FRIENDS_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(getString(R.string.notif_friend_title, name))
+            .setContentText(getString(R.string.notif_friend_text))
+            .setContentIntent(openApp)
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_SOCIAL)
+            .build()
+        try {
+            manager.notify(FRIEND_NOTIFICATION_BASE_ID + peerId.hashCode(), notification)
+        } catch (e: SecurityException) {
+            // POST_NOTIFICATIONS отозвали между проверкой и показом.
+            Log.w(TAG, "friend notification blocked", e)
         }
     }
 
@@ -377,13 +414,26 @@ class DiscoveryService : Service() {
             setSound(null, null)
             setShowBadge(false)
         }
-        getSystemService<NotificationManager>()?.createNotificationChannel(channel)
+        // Встречи с друзьями — обычной важности, со звуком: ради них уведомление и нужно.
+        val friends = NotificationChannel(
+            FRIENDS_CHANNEL_ID,
+            getString(R.string.notif_friend_channel_name),
+            NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply {
+            description = getString(R.string.notif_friend_channel_desc)
+        }
+        getSystemService<NotificationManager>()?.let {
+            it.createNotificationChannel(channel)
+            it.createNotificationChannel(friends)
+        }
     }
 
     companion object {
         private const val TAG = "DiscoveryService"
         private const val CHANNEL_ID = "discovery"
+        private const val FRIENDS_CHANNEL_ID = "friends"
         private const val NOTIFICATION_ID = 1
+        private const val FRIEND_NOTIFICATION_BASE_ID = 1000
 
         private const val ACTION_START = "space.megaworld.streetpass.action.START"
         private const val ACTION_STOP = "space.megaworld.streetpass.action.STOP"

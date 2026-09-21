@@ -28,6 +28,9 @@ interface PeerDao {
     @Query("SELECT * FROM peers WHERE friendSince IS NOT NULL ORDER BY encounterCount DESC, lastEncounterAt DESC")
     fun friends(): Flow<List<PeerEntity>>
 
+    @Query("SELECT * FROM peers WHERE lastSeenAt >= :since ORDER BY lastSeenAt DESC")
+    fun seenSince(since: Long): Flow<List<PeerEntity>>
+
     @Query("SELECT COUNT(*) FROM peers WHERE friendSince IS NOT NULL")
     fun countFriends(): Flow<Int>
 

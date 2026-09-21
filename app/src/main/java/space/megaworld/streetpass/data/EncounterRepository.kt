@@ -4,8 +4,10 @@ import androidx.room.withTransaction
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import space.megaworld.streetpass.core.FriendInvite
 import space.megaworld.streetpass.core.Nicknames
@@ -147,6 +149,20 @@ class EncounterRepository(
 
     fun peer(peerId: String): Flow<PeerEntity?> = peers.observe(peerId)
 
+    suspend fun peerOnce(peerId: String): PeerEntity? = peers.getById(peerId)
+
+    /**
+     * Кто в эфире прямо сейчас: peer'ы, чей пакет приняли за последние [NEARBY_WINDOW_MS].
+     * Окно шире одного цикла сканирования в «Экономии», иначе список моргал бы между
+     * окнами. Тикер нужен, чтобы люди исчезали из списка и без новых записей в базе.
+     */
+    val nearby: Flow<List<PeerEntity>> = flow {
+        while (true) {
+            emit(System.currentTimeMillis())
+            delay(NEARBY_TICK_MS)
+        }
+    }.flatMapLatest { now -> peers.seenSince(now - NEARBY_WINDOW_MS) }
+
     val friends: Flow<List<PeerEntity>> = peers.friends()
 
     /** Метка «друг» — локальная: другой человек о ней не узнаёт, в эфир ничего не уходит. */
@@ -207,6 +223,8 @@ class EncounterRepository(
     companion object {
         /** RSSI всегда отрицателен, поэтому 0 однозначно означает «не сохранён». */
         const val RSSI_NOT_STORED = 0
+        const val NEARBY_WINDOW_MS = 3 * 60_000L
+        const val NEARBY_TICK_MS = 15_000L
         const val WEEK_DAYS = 7
     }
 }
