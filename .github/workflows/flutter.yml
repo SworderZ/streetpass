@@ -27,6 +27,7 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+      - run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev
       - run: flutter build linux --debug
       - uses: actions/upload-artifact@v4
         with:
