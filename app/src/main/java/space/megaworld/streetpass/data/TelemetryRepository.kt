@@ -20,10 +20,11 @@ class TelemetryRepository(private val context: Context) {
         }
 
     suspend fun sendIfAllowed(): Boolean = withContext(Dispatchers.IO) {
-        val settings = (context.applicationContext as StreetPassApp).container.settingsRepository.current()
-        if (!settings.shareAnonymousStats) return@withContext false
-        val connection = URL("https://streetpass.coolify.megaworld.space/v1/telemetry").openConnection() as HttpURLConnection
         try {
+            val settings = (context.applicationContext as StreetPassApp).container.settingsRepository.current()
+            if (!settings.shareAnonymousStats) return@withContext false
+            val connection = URL("https://streetpass.coolify.megaworld.space/v1/telemetry").openConnection() as HttpURLConnection
+            try {
             connection.requestMethod = "POST"
             connection.connectTimeout = 10_000
             connection.readTimeout = 10_000
@@ -36,7 +37,12 @@ class TelemetryRepository(private val context: Context) {
                 put("app_version", BuildConfig.VERSION_NAME)
             }.toString()
             connection.outputStream.use { it.write(body.toByteArray()) }
-            connection.responseCode in 200..299
-        } finally { connection.disconnect() }
+                connection.responseCode in 200..299
+            } finally { connection.disconnect() }
+        } catch (_: Exception) {
+            // Статистика необязательна: отсутствие сети или временная ошибка API
+            // не должны влиять на работу BLE и не должны ронять приложение.
+            false
+        }
     }
 }
