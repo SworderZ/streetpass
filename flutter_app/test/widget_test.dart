@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_app/main.dart';
+import 'package:streetpass_cross_platform/main.dart';
 
 void main() {
   testWidgets('StreetPass home renders', (tester) async {
@@ -11,3 +11,4 @@ void main() {
     expect(find.text('Обнаружение'), findsOneWidget);
   });
 }
+
