@@ -28,7 +28,7 @@
   </main>
   <footer class="wrap"><span>© 2026 StreetPass</span><span>Сделано для людей, которые проходят мимо</span></footer>
   <script>
-    const API='https://streetpass.coolify.megaworld.space';
+    const API='';
     const flags={RU:'🇷🇺',DE:'🇩🇪',KZ:'🇰🇿',FI:'🇫🇮',US:'🇺🇸',GB:'🇬🇧',FR:'🇫🇷'};
     const fmt=n=>new Intl.NumberFormat('ru-RU').format(n);
     fetch(API+'/v1/stats').then(r=>r.ok?r.json():Promise.reject()).then(s=>{

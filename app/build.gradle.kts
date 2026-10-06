@@ -9,7 +9,7 @@ plugins {
 }
 
 // CI передаёт версию из git-тега; локальные сборки получают значения по умолчанию.
-val releaseVersionName = (findProperty("streetpass.versionName") as String?) ?: "0.1.0"
+val releaseVersionName = (findProperty("streetpass.versionName") as String?) ?: "0.7.3"
 val releaseVersionCode = (findProperty("streetpass.versionCode") as String?)?.toInt() ?: 1
 
 // keystore.properties не в репозитории: локально лежит рядом с проектом,

@@ -17,11 +17,11 @@ private val TinySurface = Color(0xFF171719)
 private val TinySurfaceHigh = Color(0xFF242427)
 private val TinyText = Color(0xFFF5F5F5)
 private val TinyMuted = Color(0xFFA1A1AA)
-private val StreetPassAccent = Color(0xFFFFA36C)
+private val StreetPassAccent = Color(0xFFA8C7FA)
 
 private val TinyGlyphDark = darkColorScheme(
     primary = StreetPassAccent, onPrimary = Color(0xFF171719),
-    primaryContainer = Color(0x24FFA36C), onPrimaryContainer = StreetPassAccent,
+    primaryContainer = Color(0x24A8C7FA), onPrimaryContainer = StreetPassAccent,
     secondary = StreetPassAccent, onSecondary = Color(0xFF171719),
     secondaryContainer = Color(0xFF303034), onSecondaryContainer = StreetPassAccent,
     tertiary = StreetPassAccent, surfaceTint = StreetPassAccent,
