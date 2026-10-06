@@ -15,12 +15,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import space.megaworld.streetpass.R
 import space.megaworld.streetpass.core.BleConstants
+import space.megaworld.streetpass.core.DesktopAdvertisement
+import space.megaworld.streetpass.core.DesktopProofAssembler
 import space.megaworld.streetpass.core.Hex
 import space.megaworld.streetpass.core.Nicknames
 
 /**
- * Сканер с обязательным фильтром по SERVICE_UUID. Колбэк [onSighting] приходит не в
- * main-потоке — вызывающая сторона обязана уводить работу в свой поток.
+ * Сканер с фильтрами по legacy SERVICE_UUID и desktop manufacturer envelope.
+ * Колбэк [onSighting] приходит не в main-потоке — вызывающая сторона обязана уводить
+ * работу в свой поток.
  */
 class BleScanner(
     private val context: Context,
@@ -35,6 +38,7 @@ class BleScanner(
 
     private var scanner: BluetoothLeScanner? = null
     private var callback: ScanCallback? = null
+    private val desktopProofs = DesktopProofAssembler()
 
     // Разрешения проверяет вызывающая сторона до запуска сервиса; отзыв в рантайме
     // ловится через SecurityException, поэтому статическая проверка lint здесь избыточна.
@@ -52,10 +56,13 @@ class BleScanner(
             return false
         }
 
-        // Фильтр по UUID — не оптимизация, а требование: с Android 8.1 система не отдаёт
-        // результаты нефильтрованного сканирования при выключенном экране.
+        // Оба фильтра нужны: Android должен доставлять legacy и manufacturer-рекламу
+        // при выключенном экране, а чужие BLE-пакеты не должны будить приложение.
         val filters = listOf(
             ScanFilter.Builder().setServiceUuid(BleConstants.SERVICE_UUID).build(),
+            ScanFilter.Builder()
+                .setManufacturerData(DesktopAdvertisement.COMPANY_ID, DesktopAdvertisement.PREFIX)
+                .build(),
         )
         val settings = ScanSettings.Builder()
             .setScanMode(scanMode)
@@ -109,20 +116,47 @@ class BleScanner(
         }
         callback = null
         scanner = null
+        desktopProofs.clear()
         _scanning.value = false
     }
 
     private fun handle(result: ScanResult) {
-        // Из результата берём только Service Data и RSSI. MAC и имя не читаем: MAC система
-        // ротирует и он никого не идентифицирует, имя устройства — персональные данные.
+        // Из результата берём только Service Data/manufacturer data и RSSI. MAC и имя
+        // не читаем: MAC система ротирует и он никого не идентифицирует, имя устройства
+        // — персональные данные.
         val record = result.scanRecord ?: return
-        val data = record.getServiceData(BleConstants.SERVICE_UUID) ?: return
+        val serviceData = record.getServiceData(BleConstants.SERVICE_UUID)
+        if (serviceData != null) {
+            handleServiceData(record, serviceData, result.rssi)
+            return
+        }
+
+        val manufacturerData = record.getManufacturerSpecificData(DesktopAdvertisement.COMPANY_ID) ?: return
+        when (val packet = DesktopAdvertisement.parse(manufacturerData)) {
+            is DesktopAdvertisement.Packet.Nickname -> {
+                onSighting(Hex.encode(packet.peerId), result.rssi, packet.value, null)
+            }
+            is DesktopAdvertisement.Packet.ProofChunk -> {
+                val peerId = Hex.encode(packet.peerId)
+                desktopProofs.accept(packet, System.currentTimeMillis())?.forEach { frame ->
+                    onSighting(peerId, result.rssi, null, frame)
+                }
+            }
+            null -> Unit
+        }
+    }
+
+    private fun handleServiceData(
+        record: android.bluetooth.le.ScanRecord,
+        data: ByteArray,
+        rssi: Int,
+    ) {
         if (data.size != BleConstants.PEER_ID_BYTES) return
         // Ник и кусок доказательства есть только если стек успел получить scan-response,
         // и в одном пакете приходит что-то одно — кадры чередуются на стороне передатчика.
         val nickname = record.getServiceData(BleConstants.NICKNAME_UUID)?.let(Nicknames::decode)
         val proofFrame = record.getServiceData(BleConstants.PROOF_UUID)
-        onSighting(Hex.encode(data), result.rssi, nickname, proofFrame)
+        onSighting(Hex.encode(data), rssi, nickname, proofFrame)
     }
 
     private fun adapter(): BluetoothAdapter? = context.getSystemService<BluetoothManager>()?.adapter

@@ -19,6 +19,11 @@ PROOF_BYTES = 102
 PROOF_FRAME_BYTES = 27
 CHUNK_DATA_BYTES = PROOF_FRAME_BYTES - 1
 CHUNK_COUNT = (PROOF_BYTES + CHUNK_DATA_BYTES - 1) // CHUNK_DATA_BYTES
+DESKTOP_MAGIC = b"SP"
+DESKTOP_VERSION = 1
+DESKTOP_COMPANY_ID = 0xFFFF
+DESKTOP_HEADER_BYTES = 2 + 1 + 1 + 8
+DESKTOP_CHUNK_DATA_BYTES = 14
 DOMAIN = b"StreetPass-ID-v1"
 
 
@@ -101,6 +106,85 @@ class ProofAssembler:
         if self.received == (1 << CHUNK_COUNT) - 1:
             return bytes(self.buffer)
         return None
+
+
+def desktop_proof_chunks(proof: bytes, generation: int = 0) -> list[bytes]:
+    """Split proof for a 27-byte Windows manufacturer-data envelope."""
+    if len(proof) != PROOF_BYTES:
+        raise ValueError("proof must contain 102 bytes")
+    result = []
+    count = (PROOF_BYTES + DESKTOP_CHUNK_DATA_BYTES - 1) // DESKTOP_CHUNK_DATA_BYTES
+    for index in range(count):
+        start = index * DESKTOP_CHUNK_DATA_BYTES
+        result.append(bytes([((generation & 0x0F) << 4) | index]) + proof[start : start + DESKTOP_CHUNK_DATA_BYTES])
+    return result
+
+
+@dataclass
+class DesktopProofAssembler:
+    generation: int = -1
+    received: int = 0
+    buffer: bytearray = field(default_factory=lambda: bytearray(PROOF_BYTES))
+
+    def accept(self, frame: bytes) -> bytes | None:
+        if len(frame) < 2:
+            return None
+        index = frame[0] & 0x0F
+        generation = frame[0] >> 4
+        count = (PROOF_BYTES + DESKTOP_CHUNK_DATA_BYTES - 1) // DESKTOP_CHUNK_DATA_BYTES
+        if index >= count:
+            return None
+        expected = min(DESKTOP_CHUNK_DATA_BYTES, PROOF_BYTES - index * DESKTOP_CHUNK_DATA_BYTES)
+        if len(frame) - 1 != expected:
+            return None
+        if generation != self.generation:
+            self.generation, self.received = generation, 0
+            self.buffer = bytearray(PROOF_BYTES)
+        start = index * DESKTOP_CHUNK_DATA_BYTES
+        self.buffer[start : start + expected] = frame[1:]
+        self.received |= 1 << index
+        return bytes(self.buffer) if self.received == (1 << count) - 1 else None
+
+
+@dataclass(frozen=True)
+class DesktopPacket:
+    peer_id: bytes
+    nickname: str | None = None
+    proof_frame: bytes | None = None
+
+
+def desktop_packet(peer: bytes, *, frame: bytes | None = None, nickname: str = "") -> bytes:
+    if len(peer) != 8:
+        raise ValueError("peer ID must contain 8 bytes")
+    if frame is not None and nickname:
+        raise ValueError("a packet carries either proof or nickname")
+    if frame is not None:
+        payload = DESKTOP_MAGIC + bytes([DESKTOP_VERSION, 1]) + peer + frame
+    else:
+        encoded = nickname.encode("utf-8")[:15]
+        payload = DESKTOP_MAGIC + bytes([DESKTOP_VERSION, 0]) + peer + encoded
+    if len(payload) > 27:
+        raise ValueError("manufacturer packet exceeds 27 bytes")
+    return payload
+
+
+def parse_desktop_packet(company_id: int, payload: bytes) -> DesktopPacket | None:
+    if company_id != DESKTOP_COMPANY_ID or len(payload) < DESKTOP_HEADER_BYTES:
+        return None
+    if payload[:2] != DESKTOP_MAGIC or payload[2] != DESKTOP_VERSION:
+        return None
+    peer = payload[4:12]
+    kind = payload[3]
+    body = payload[12:]
+    if kind == 1:
+        return DesktopPacket(peer_id=peer, proof_frame=body)
+    if kind == 0 and len(body) <= 15:
+        try:
+            nickname = body.decode("utf-8").strip() or None
+        except UnicodeDecodeError:
+            return None
+        return DesktopPacket(peer_id=peer, nickname=nickname)
+    return None
 
 
 def service_data(uuid16: int, payload: bytes) -> tuple[str, bytes]:

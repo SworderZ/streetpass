@@ -9,6 +9,14 @@ description = "StreetPass BLE protocol and desktop clients"
 requires-python = ">=3.11"
 dependencies = [
     "cryptography>=43,<46",
+    "bleak>=0.22,<1",
+]
+
+[project.optional-dependencies]
+linux = ["dbus-next>=0.2.3,<1"]
+windows = [
+    "winrt-Windows.Devices.Bluetooth.Advertisement>=2.0,<3",
+    "winrt-Windows.Storage.Streams>=2.0,<3",
 ]
 
 [tool.setuptools]
