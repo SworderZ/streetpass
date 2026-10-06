@@ -1,0 +1,8 @@
+README.md
+pyproject.toml
+streetpass_protocol.py
+streetpass_desktop.egg-info/PKG-INFO
+streetpass_desktop.egg-info/SOURCES.txt
+streetpass_desktop.egg-info/dependency_links.txt
+streetpass_desktop.egg-info/requires.txt
+streetpass_desktop.egg-info/top_level.txt
