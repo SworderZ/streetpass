@@ -307,6 +307,7 @@
     <string name="sw_stats_sub">Send only country and app version. No name, location, Bluetooth ID or encounter history.</string>
     <string name="home_stats_title">Your statistics</string>
     <string name="home_today">Today</string>
+    <string name="open_global_stats">View global statistics</string>
 </resources>
 
 

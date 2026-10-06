@@ -307,6 +307,21 @@ fun HomeScreen(
             StatsSummaryCard(state)
         }
 
+        item {
+            TextButton(
+                onClick = {
+                    try {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://streetpass.coolify.megaworld.space")))
+                    } catch (_: ActivityNotFoundException) {
+                        // На устройстве нет браузера — экран продолжает работать без ссылки.
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.open_global_stats))
+            }
+        }
+
         // РџРѕРєР° РѕР±РЅР°СЂСѓР¶РµРЅРёРµ СЂР°Р±РѕС‚Р°РµС‚, СЃРµРєС†РёСЏ РІРёРґРЅР° РІСЃРµРіРґР° вЂ” РїСѓСЃС‚Р°СЏ РѕРЅР° С‚РѕР¶Рµ РёРЅС„РѕСЂРјР°С‚РёРІРЅР°.
         if (state.discovery.running || state.nearby.isNotEmpty()) {
             item {
