@@ -1,0 +1,72 @@
+name: Flutter cross-platform client
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'flutter_app/**'
+      - '.github/workflows/flutter.yml'
+  pull_request:
+    paths:
+      - 'flutter_app/**'
+      - '.github/workflows/flutter.yml'
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.3'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build linux --debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: streetpass-linux-debug
+          path: flutter_app/build/linux/x64/debug/bundle
+
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.3'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build apk --debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: streetpass-flutter-android-debug
+          path: flutter_app/build/app/outputs/flutter-apk/app-debug.apk
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: flutter_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.3'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build windows --debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: streetpass-windows-debug
+          path: flutter_app/build/windows/x64/runner/Debug
