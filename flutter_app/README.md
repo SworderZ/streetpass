@@ -1,20 +1,25 @@
 # StreetPass cross-platform client
 
-Flutter-клиент с единым интерфейсом для Android, Windows и Linux.
+Единый Flutter-клиент StreetPass для Android, Windows и Linux. В репозитории больше
+нет отдельного нативного Android-проекта: исходник приложения находится в этой
+папке.
 
-Сейчас реализованы общий экран обнаружения, никнейм, локальные встречи,
-BLE-сканирование и manufacturer-data реклама через `universal_ble`.
-Windows и Linux используют один Dart-код; нативный BLE предоставляется плагином.
+Реализованы BLE-сканирование и реклама, подписанные рукопожатия, никнейм,
+сохранение ID устройства и локальная история встреч. На Linux текущий BLE-
+плагин поддерживает сканирование, но режим рекламы зависит от BlueZ и пока не
+включён по умолчанию.
 
 Проверки:
 
 ```text
+flutter pub get
 flutter analyze
 flutter test
-flutter build apk --debug
+flutter build apk --release
+flutter build windows --release
+flutter build linux --release
 ```
 
-Для запуска готовой Windows-сборки на другом компьютере установите официальный
-[Microsoft Visual C++ x64 Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe),
-распакуйте весь архив и запускайте `streetpass.exe` рядом с папками `data` и DLL.
-BLE-сон и постоянный фон требуют отдельной настройки для конкретной ОС.
+Для Windows установите официальный [Microsoft Visual C++ x64
+Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe), распакуйте
+весь bundle и запускайте `streetpass.exe` рядом с `data` и DLL.

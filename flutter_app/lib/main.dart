@@ -51,16 +51,35 @@ class _StreetPassAppState extends State<StreetPassApp> {
   }
 
   Future<void> _toggle(bool value) async {
-    if (value) {
-      await service.start(nickname, (meeting) async {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('meeting_count', meetings.length + 1);
-        if (mounted) setState(() => meetings = [meeting, ...meetings]);
-      });
-    } else {
+    try {
+      if (value) {
+        await service.start(nickname, (meeting) async {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setInt('meeting_count', meetings.length + 1);
+          if (mounted) setState(() => meetings = [meeting, ...meetings]);
+        });
+      } else {
+        await service.stop();
+      }
+      if (mounted) setState(() => running = value);
+    } catch (error) {
       await service.stop();
+      if (!mounted) return;
+      setState(() => running = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(_bleError(error))));
     }
-    if (mounted) setState(() => running = value);
+  }
+
+  static String _bleError(Object error) {
+    final message = error.toString().replaceFirst('Bad state: ', '');
+    if (message.contains('Bluetooth is off')) {
+      return 'Включите Bluetooth и попробуйте ещё раз';
+    }
+    if (message.contains('peripheral advertising')) {
+      return 'Этот Bluetooth-адаптер не умеет BLE-рекламу';
+    }
+    return 'Не удалось запустить Bluetooth: $message';
   }
 
   Future<void> _saveNickname(String value) async {
@@ -85,15 +104,17 @@ class _StreetPassAppState extends State<StreetPassApp> {
       ),
       home: loading
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-          : HomePage(
-              running: running,
-              meetings: meetings,
-              nickname: nickname,
-              onToggle: _toggle,
-              onOpenSettings: () => showDialog<void>(
-                context: context,
-                builder: (_) =>
-                    SettingsDialog(nickname: nickname, onSave: _saveNickname),
+          : Builder(
+              builder: (homeContext) => HomePage(
+                running: running,
+                meetings: meetings,
+                nickname: nickname,
+                onToggle: _toggle,
+                onOpenSettings: () => showDialog<void>(
+                  context: homeContext,
+                  builder: (_) =>
+                      SettingsDialog(nickname: nickname, onSave: _saveNickname),
+                ),
               ),
             ),
     );
@@ -254,6 +275,13 @@ class SettingsDialog extends StatefulWidget {
 
 class _SettingsDialogState extends State<SettingsDialog> {
   late final controller = TextEditingController(text: widget.nickname);
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: const Text('Настройки'),
@@ -308,10 +336,24 @@ class DesktopStreetPassService {
   Future<void> start(String value, void Function(Meeting) onMeeting) async {
     nickname = value;
     final currentIdentity = identity ??= StreetPassCrypto.create();
-    await UniversalBle.requestPermissions();
-    scanner = DesktopScanner(onMeeting, ignoredPeerId: currentIdentity.peerId);
-    await scanner!.start();
+    await UniversalBle.requestPermissions(withAndroidFineLocation: true);
+    final availability = await UniversalBle.getBluetoothAvailabilityState();
+    if (availability != AvailabilityState.poweredOn) {
+      throw StateError('Bluetooth is off or unavailable: ${availability.name}');
+    }
+    final capabilities = await UniversalBlePeripheral.getCapabilities();
+    if (!capabilities.supportsPeripheralMode ||
+        !capabilities.supportsManufacturerDataInAdvertisement) {
+      throw StateError('peripheral advertising is unavailable');
+    }
+
+    final nextScanner = DesktopScanner(
+      onMeeting,
+      ignoredPeerId: currentIdentity.peerId,
+    );
+    scanner = nextScanner;
     try {
+      await nextScanner.start();
       _advertisementPackets = StreetPassCrypto.desktopProofPackets(
         currentIdentity,
       );
@@ -329,11 +371,17 @@ class DesktopStreetPassService {
       }
       _advertisementIndex = 0;
       await _publishNextAdvertisement();
+      if (!advertising) {
+        throw StateError('peripheral advertising failed');
+      }
       _advertisementRotation = Timer.periodic(
         const Duration(milliseconds: 350),
-        (_) => _publishNextAdvertisement(),
+        (_) => unawaited(_publishNextAdvertisement()),
       );
-    } catch (_) {}
+    } catch (_) {
+      await stop();
+      rethrow;
+    }
   }
 
   Future<void> stop() async {

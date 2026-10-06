@@ -8,50 +8,25 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  android:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: flutter_app
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
+      - uses: subosito/flutter-action@v2
         with:
-          distribution: temurin
-          java-version: "17"
-
-      - uses: gradle/actions/setup-gradle@v4
-
-      - name: Restore signing key
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
-          cat > keystore.properties <<EOF
-          storeFile=keystore.jks
-          storePassword=$KEYSTORE_PASSWORD
-          keyAlias=$KEY_ALIAS
-          keyPassword=$KEY_PASSWORD
-          EOF
-
-      - name: Lint
-        run: |
-          chmod +x gradlew
-          ./gradlew lint
-
-      - name: Unit tests
-        run: ./gradlew test
-
-      - name: Build signed release
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          ./gradlew assembleRelease \
-            -Pstreetpass.versionName="$VERSION" \
-            -Pstreetpass.versionCode="$GITHUB_RUN_NUMBER"
-          cp app/build/outputs/apk/release/app-release.apk "streetpass-${GITHUB_REF_NAME}.apk"
+          flutter-version: '3.47.3'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build apk --release --build-name="${GITHUB_REF_NAME#v}" --build-number="$GITHUB_RUN_NUMBER"
+      - run: cp build/app/outputs/flutter-apk/app-release.apk "../streetpass-${GITHUB_REF_NAME}.apk"
 
       - uses: softprops/action-gh-release@v2
         with:
-          files: streetpass-v*.apk
+          files: streetpass-${{ github.ref_name }}.apk
           generate_release_notes: true

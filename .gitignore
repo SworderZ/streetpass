@@ -19,3 +19,4 @@ captures/
 desktop/__pycache__/ndesktop/*.egg-info/
 
 flutter-artifacts/
+flutter-artifacts-*/
