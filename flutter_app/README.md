@@ -14,6 +14,7 @@ flutter test
 flutter build apk --debug
 ```
 
-Нативная проверка Windows требует Visual Studio с Desktop development with C++,
-Linux-сборка выполняется на Linux-хосте. BLE-сон и постоянный фон требуют
-отдельной настройки foreground/systemd для конкретной ОС.
+Для запуска готовой Windows-сборки на другом компьютере установите официальный
+[Microsoft Visual C++ x64 Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe),
+распакуйте весь архив и запускайте `streetpass.exe` рядом с папками `data` и DLL.
+BLE-сон и постоянный фон требуют отдельной настройки для конкретной ОС.

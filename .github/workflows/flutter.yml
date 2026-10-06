@@ -66,8 +66,9 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build windows --debug
+      - run: flutter build windows --release
+      - run: Copy-Item windows/README-Windows.txt build/windows/x64/runner/Release/README-Windows.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: streetpass-windows-debug
-          path: flutter_app/build/windows/x64/runner/Debug
+          name: streetpass-windows-release
+          path: flutter_app/build/windows/x64/runner/Release
