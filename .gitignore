@@ -17,3 +17,5 @@ captures/
 
 # Desktop Python artifacts
 desktop/__pycache__/ndesktop/*.egg-info/
+
+flutter-artifacts/
