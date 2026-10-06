@@ -26,6 +26,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val NOTIFY_FRIENDS = booleanPreferencesKey("notify_friends")
         val DISCOVERY_ACTIVE = booleanPreferencesKey("discovery_active")
         val SHARE_ANONYMOUS_STATS = booleanPreferencesKey("share_anonymous_stats")
+        val DISABLE_UPDATE_PROMPT = booleanPreferencesKey("disable_update_prompt")
     }
 
     val settings: Flow<AppSettings> = dataStore.data
@@ -60,6 +61,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun setShareAnonymousStats(value: Boolean) = edit { it[Keys.SHARE_ANONYMOUS_STATS] = value }
 
+    suspend fun setDisableUpdatePrompt(value: Boolean) = edit { it[Keys.DISABLE_UPDATE_PROMPT] = value }
+
     private suspend fun edit(block: (MutablePreferences) -> Unit) {
         dataStore.edit { block(it) }
     }
@@ -81,6 +84,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             notifyFriends = this[Keys.NOTIFY_FRIENDS] ?: defaults.notifyFriends,
             discoveryActive = this[Keys.DISCOVERY_ACTIVE] ?: defaults.discoveryActive,
             shareAnonymousStats = this[Keys.SHARE_ANONYMOUS_STATS] ?: defaults.shareAnonymousStats,
+            disableUpdatePrompt = this[Keys.DISABLE_UPDATE_PROMPT] ?: defaults.disableUpdatePrompt,
         )
     }
 }

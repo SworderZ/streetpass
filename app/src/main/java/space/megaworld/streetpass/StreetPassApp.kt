@@ -31,6 +31,7 @@ class StreetPassApp : Application() {
         // после обновления со сборки, где ID был просто случайными байтами).
         container.applicationScope.launch { container.identityRepository.getOrCreate() }
         container.applicationScope.launch { container.telemetryRepository.sendIfAllowed() }
+        container.applicationScope.launch { container.updateRepository.check() }
     }
 }
 

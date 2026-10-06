@@ -308,6 +308,11 @@
     <string name="home_stats_title">Your statistics</string>
     <string name="home_today">Today</string>
     <string name="open_global_stats">View global statistics</string>
+    <string name="update_prompt_title">New version %1$s is available</string>
+    <string name="update_prompt_text">A new StreetPass version is available.</string>
+    <string name="update_prompt_never">Don\'t show automatically again</string>
+    <string name="update_prompt_install">Install</string>
+    <string name="update_prompt_later">Later</string>
 </resources>
 
 

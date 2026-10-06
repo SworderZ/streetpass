@@ -260,4 +260,9 @@
     <string name="home_stats_title">あなたの統計</string>
     <string name="home_today">今日</string>
     <string name="open_global_stats">世界的な統計を表示する</string>
+    <string name="update_prompt_title">新しいバージョン %1$s があります</string>
+    <string name="update_prompt_text">StreetPass の新しいバージョンがあります。</string>
+    <string name="update_prompt_never">自動的に表示しない</string>
+    <string name="update_prompt_install">インストール</string>
+    <string name="update_prompt_later">後で</string>
 </resources>

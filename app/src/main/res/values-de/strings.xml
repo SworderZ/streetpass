@@ -260,4 +260,9 @@
     <string name="home_stats_title">Ihre Statistiken</string>
     <string name="home_today">Heute</string>
     <string name="open_global_stats">Globale Statistiken anzeigen</string>
+    <string name="update_prompt_title">Neue Version %1$s verfügbar</string>
+    <string name="update_prompt_text">Eine neue StreetPass-Version ist verfügbar.</string>
+    <string name="update_prompt_never">Nicht mehr automatisch anzeigen</string>
+    <string name="update_prompt_install">Installieren</string>
+    <string name="update_prompt_later">Später</string>
 </resources>

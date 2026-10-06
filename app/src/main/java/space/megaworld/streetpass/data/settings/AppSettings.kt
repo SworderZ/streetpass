@@ -15,6 +15,7 @@ data class AppSettings(
     /** Было ли обнаружение включено пользователем — нужно для восстановления после перезагрузки. */
     val discoveryActive: Boolean = false,
     val shareAnonymousStats: Boolean = false,
+    val disableUpdatePrompt: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_COOLDOWN_MINUTES = 60
