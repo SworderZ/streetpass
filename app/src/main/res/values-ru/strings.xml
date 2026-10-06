@@ -333,4 +333,8 @@
     <string name="err_scan_generic">Ошибка BLE-сканирования (%1$d)</string>
     <string name="sw_stats_title">Участвовать в общей статистике</string>
     <string name="sw_stats_sub">Отправлять только страну и версию приложения. Без имени, геолокации, BLE-ID и истории встреч.</string>
+    <string name="home_stats_title">Твоя статистика</string>
+    <string name="home_today">Сегодня</string>
 </resources>
+
+

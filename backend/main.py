@@ -38,7 +38,8 @@ def telemetry(item: Telemetry):
 def stats():
     cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
     with db() as c:
-        total = c.execute("SELECT COUNT(*) FROM installations").fetchone()[0]
-        active = c.execute("SELECT COUNT(*) FROM installations WHERE last_seen >= ?", (cutoff,)).fetchone()[0]
-        rows = c.execute("SELECT country, COUNT(*) n FROM installations GROUP BY country ORDER BY n DESC").fetchall()
+        total = c.execute("SELECT COUNT(*) FROM installations WHERE id NOT LIKE 'diagnostic-%'").fetchone()[0]
+        active = c.execute("SELECT COUNT(*) FROM installations WHERE id NOT LIKE 'diagnostic-%' WHERE last_seen >= ?", (cutoff,)).fetchone()[0]
+        rows = c.execute("SELECT country, COUNT(*) n FROM installations WHERE id NOT LIKE 'diagnostic-%' GROUP BY country ORDER BY n DESC").fetchall()
     return {"total_users": total, "active_30d": active, "countries": [{"code": x, "users": n} for x, n in rows], "updated_at": datetime.now(timezone.utc).isoformat()}
+

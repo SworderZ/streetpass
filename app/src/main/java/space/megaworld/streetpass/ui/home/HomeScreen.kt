@@ -231,8 +231,8 @@ fun HomeScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item { DiscoveryCard(state = state, onToggle = ::onToggle) }
 
@@ -304,16 +304,7 @@ fun HomeScreen(
         }
 
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatTile(stringResource(R.string.tile_today_encounters), state.todayEncounters.toString(), Modifier.weight(1f))
-                    StatTile(stringResource(R.string.tile_today_people), state.todayPeople.toString(), Modifier.weight(1f))
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatTile(stringResource(R.string.tile_total_people), state.totalPeers.toString(), Modifier.weight(1f))
-                    StatTile(stringResource(R.string.tile_total_encounters), state.totalEncounters.toString(), Modifier.weight(1f))
-                }
-            }
+            StatsSummaryCard(state)
         }
 
         // Пока обнаружение работает, секция видна всегда — пустая она тоже информативна.
@@ -371,6 +362,25 @@ fun HomeScreen(
     }
 }
 
+@Composable
+private fun StatsSummaryCard(state: HomeUiState) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(stringResource(R.string.home_stats_title), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.home_today), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatTile(stringResource(R.string.tile_today_encounters), state.todayEncounters.toString(), Modifier.weight(1f))
+                StatTile(stringResource(R.string.tile_today_people), state.todayPeople.toString(), Modifier.weight(1f))
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatTile(stringResource(R.string.tile_total_people), state.totalPeers.toString(), Modifier.weight(1f))
+                StatTile(stringResource(R.string.tile_total_encounters), state.totalEncounters.toString(), Modifier.weight(1f))
+            }
+        }
+    }
+}
 @Composable
 private fun NearbyRow(peer: PeerEntity, onClick: () -> Unit) {
     Row(
@@ -475,3 +485,5 @@ private fun IdentityCard(peerId: String, nickname: String) {
         }
     }
 }
+
+
