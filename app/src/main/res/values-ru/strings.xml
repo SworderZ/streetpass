@@ -335,6 +335,7 @@
     <string name="sw_stats_sub">Отправлять только страну и версию приложения. Без имени, геолокации, BLE-ID и истории встреч.</string>
     <string name="home_stats_title">Твоя статистика</string>
     <string name="home_today">Сегодня</string>
+    <string name="open_global_stats">Открыть общую статистику</string>
 </resources>
 
 
