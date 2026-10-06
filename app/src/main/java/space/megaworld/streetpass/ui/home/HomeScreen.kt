@@ -329,6 +329,7 @@ class HomeViewModel(
     val settings: StateFlow<AppSettings> = container.settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppSettings())
     val updateState: StateFlow<UpdateState> = container.updateRepository.state
+    fun checkForUpdates() { viewModelScope.launch { container.updateRepository.check() } }
     fun canInstallPackages(): Boolean = container.updateRepository.canInstallPackages()
     fun downloadUpdate(release: ReleaseInfo) = container.updateRepository.download(release)
     fun resetUpdateState() = container.updateRepository.reset()
