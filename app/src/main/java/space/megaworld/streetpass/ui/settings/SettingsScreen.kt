@@ -119,6 +119,13 @@ class SettingsViewModel(
         viewModelScope.launch { container.settingsRepository.setNotifyFriends(value) }
     }
 
+    fun setShareAnonymousStats(value: Boolean) {
+        viewModelScope.launch {
+            container.settingsRepository.setShareAnonymousStats(value)
+            if (value) container.telemetryRepository.sendIfAllowed()
+        }
+    }
+
     fun clearHistory() {
         viewModelScope.launch { container.encounterRepository.clearAll() }
     }
@@ -260,6 +267,13 @@ fun SettingsScreen(
                         subtitle = stringResource(R.string.sw_store_rssi_sub),
                         checked = settings.storeRssi,
                         onChange = viewModel::setStoreRssi,
+                    )
+                    HorizontalDivider()
+                    SwitchRow(
+                        title = stringResource(R.string.sw_stats_title),
+                        subtitle = stringResource(R.string.sw_stats_sub),
+                        checked = settings.shareAnonymousStats,
+                        onChange = viewModel::setShareAnonymousStats,
                     )
                     HorizontalDivider()
                     Spacer(modifier = Modifier.height(12.dp))

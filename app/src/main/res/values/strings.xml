@@ -303,4 +303,6 @@
     <string name="err_scan_hw_resources">The Bluetooth controller ran out of scanning resources</string>
     <string name="err_scan_too_frequent">Scanning restarted too often; the system is temporarily blocking it</string>
     <string name="err_scan_generic">BLE scanning error (%1$d)</string>
+    <string name="sw_stats_title">Participate in total statistics</string>
+    <string name="sw_stats_sub">Send only country and app version. No name, location, Bluetooth ID or encounter history.</string>
 </resources>

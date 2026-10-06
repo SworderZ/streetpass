@@ -16,6 +16,7 @@ import space.megaworld.streetpass.data.db.AppDatabase
 import space.megaworld.streetpass.data.identity.IdentityRepository
 import space.megaworld.streetpass.data.settings.SettingsRepository
 import space.megaworld.streetpass.data.update.UpdateRepository
+import space.megaworld.streetpass.data.TelemetryRepository
 
 class StreetPassApp : Application() {
 
@@ -29,6 +30,7 @@ class StreetPassApp : Application() {
         // чтобы UI не показывал устаревший ID до первого запуска сервиса (например,
         // после обновления со сборки, где ID был просто случайными байтами).
         container.applicationScope.launch { container.identityRepository.getOrCreate() }
+        container.applicationScope.launch { container.telemetryRepository.sendIfAllowed() }
     }
 }
 
@@ -45,6 +47,8 @@ class AppContainer(context: Context) {
     val identityRepository = IdentityRepository(context.appDataStore)
 
     val encounterRepository = EncounterRepository(database)
+
+    val telemetryRepository = TelemetryRepository(context.applicationContext)
 
     val achievementRepository = AchievementRepository(database)
 
