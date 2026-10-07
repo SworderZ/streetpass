@@ -20,7 +20,6 @@ const releasesUrl = 'https://github.com/SworderZ/streetpass/releases';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  ForegroundController.initialize();
   runApp(const StreetPassApp());
 }
 
@@ -100,6 +99,10 @@ class _StreetPassAppState extends State<StreetPassApp> {
     try {
       if (value) {
         if (ForegroundController.supported) {
+          // Initialize the Android service only when it is actually needed.
+          // Keeping plugin setup out of process startup avoids a native plugin
+          // failure taking down the first Flutter frame.
+          ForegroundController.initialize();
           current.settings.active = true;
           await current.save();
           final result = await ForegroundController.start();

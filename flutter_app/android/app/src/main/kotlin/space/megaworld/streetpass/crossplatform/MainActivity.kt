@@ -1,4 +1,4 @@
-package com.example.flutter_app
+package space.megaworld.streetpass.crossplatform
 
 import io.flutter.embedding.android.FlutterActivity
 
