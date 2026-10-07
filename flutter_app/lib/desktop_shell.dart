@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
@@ -23,6 +24,8 @@ class DesktopShellController with TrayListener, WindowListener {
 
   static Future<void> applySettings(AppSettings settings) =>
       instance._applySettings(settings);
+
+  static Future<void> exit() => instance._exit();
 
   Future<void> _initialize() async {
     if (!supported || _initialized) return;
@@ -119,13 +122,7 @@ class DesktopShellController with TrayListener, WindowListener {
           '/f',
         ]);
       } else {
-        await Process.run('reg.exe', [
-          'delete',
-          key,
-          '/v',
-          'StreetPass',
-          '/f',
-        ]);
+        await Process.run('reg.exe', ['delete', key, '/v', 'StreetPass', '/f']);
       }
       return;
     }
@@ -164,6 +161,14 @@ X-GNOME-Autostart-enabled=true
 
   @override
   void onTrayIconMouseDown() => _showWindow();
+
+  @override
+  void onTrayIconRightMouseDown() {
+    unawaited(trayManager.popUpContextMenu());
+  }
+
+  @override
+  void onTrayIconRightMouseUp() {}
 
   @override
   void onTrayMenuItemClick(MenuItem menuItem) {

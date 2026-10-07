@@ -60,13 +60,21 @@ class _StreetPassAppState extends State<StreetPassApp> {
   }
 
   void _onForegroundData(Object data) {
-    if (!mounted ||
-        store == null ||
-        data is! Map ||
-        data['type'] != 'meeting') {
-      return;
+    unawaited(_handleForegroundData(data));
+  }
+
+  Future<void> _handleForegroundData(Object data) async {
+    if (!mounted || store == null || data is! Map) return;
+    switch (data['type']) {
+      case 'meeting':
+        // The Android foreground isolate writes to the same preferences file.
+        // Reload it here so the history and counters show the new meeting.
+        await store!.reload();
+        break;
+      case 'status':
+        discovery.applyBackgroundStatus(data);
+        break;
     }
-    store!.changed();
   }
 
   @override
@@ -662,10 +670,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         if (DesktopShellController.supported) ...[
           const Divider(height: 28),
-          Text(
-            'Работа в трее',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text('Работа в трее', style: Theme.of(context).textTheme.titleMedium),
           _SettingSwitch(
             title: 'Запускать StreetPass вместе с системой',
             value: s.desktopAutoStart,
@@ -694,6 +699,11 @@ class _SettingsPageState extends State<SettingsPage> {
               await DesktopShellController.applySettings(s);
               if (mounted) setState(() {});
             },
+          ),
+          OutlinedButton.icon(
+            onPressed: () => unawaited(DesktopShellController.exit()),
+            icon: const Icon(Icons.power_settings_new),
+            label: const Text('Выйти из StreetPass'),
           ),
         ],
         _SettingSwitch(

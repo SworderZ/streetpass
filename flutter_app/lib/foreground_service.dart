@@ -27,18 +27,31 @@ class StreetPassTaskHandler extends TaskHandler {
       return;
     }
     discovery = DiscoveryService();
-    await discovery!.start(store!, (sighting) async {
-      if (!sighting.verified && !store!.settings.acceptUnsigned) return;
-      if (store!.record(
-        sighting.peerId,
-        sighting.time,
-        name: sighting.nickname,
-        rssi: sighting.rssi,
-      )) {
-        await store!.save();
-        FlutterForegroundTask.sendDataToMain({'type': 'meeting'});
-      }
-    });
+    try {
+      await discovery!.start(store!, (sighting) async {
+        if (!sighting.verified && !store!.settings.acceptUnsigned) return;
+        if (store!.record(
+          sighting.peerId,
+          sighting.time,
+          name: sighting.nickname,
+          rssi: sighting.rssi,
+        )) {
+          await store!.save();
+          FlutterForegroundTask.sendDataToMain({'type': 'meeting'});
+        }
+        _sendStatus();
+      });
+      _sendStatus();
+    } catch (error) {
+      FlutterForegroundTask.sendDataToMain({
+        'type': 'status',
+        'running': false,
+        'scanning': false,
+        'broadcasting': false,
+        'error': error.toString(),
+      });
+      await FlutterForegroundTask.stopService();
+    }
   }
 
   @override
@@ -46,6 +59,22 @@ class StreetPassTaskHandler extends TaskHandler {
     FlutterForegroundTask.updateService(
       notificationText: 'StreetPass ищет людей рядом',
     );
+    _sendStatus();
+  }
+
+  void _sendStatus() {
+    final current = discovery;
+    if (current == null) return;
+    FlutterForegroundTask.sendDataToMain({
+      'type': 'status',
+      'running': current.running,
+      'scanning': current.scanning,
+      'broadcasting': current.broadcasting,
+      'receivedPackets': current.receivedPackets,
+      'verifiedProofs': current.verifiedProofs,
+      'rejectedProofs': current.rejectedProofs,
+      'error': current.error,
+    });
   }
 
   @override

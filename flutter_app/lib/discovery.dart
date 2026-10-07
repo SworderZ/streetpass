@@ -56,10 +56,18 @@ class SystemBleTransport implements BleTransport {
   @override
   Future<void> scan(void Function(BleDevice) onPacket) async {
     _packets ??= UniversalBle.scanStream.listen(onPacket);
-    // Do not use a native Android scan filter here. Android vendors and BLE
-    // stacks expose manufacturer data differently; filtering in Dart keeps
-    // the StreetPass packet visible on both Android and desktop adapters.
-    await UniversalBle.startScan();
+    // A company-only filter keeps Android's BLE scan alive when the screen is
+    // off. The complete StreetPass packet is still validated below in Dart,
+    // so vendor specific payload layouts cannot hide a valid packet.
+    await UniversalBle.startScan(
+      scanFilter: Platform.isAndroid
+          ? ScanFilter(
+              withManufacturerData: [
+                ManufacturerDataFilter(companyIdentifier: companyId),
+              ],
+            )
+          : null,
+    );
   }
 
   @override
@@ -182,6 +190,24 @@ class DiscoveryService extends ChangeNotifier {
 
   void setUiActive(bool value) {
     running = value;
+    notifyListeners();
+  }
+
+  void applyBackgroundStatus(Map data) {
+    running = data['running'] == true;
+    scanning = data['scanning'] == true;
+    broadcasting = data['broadcasting'] == true;
+    if (data['receivedPackets'] is num) {
+      receivedPackets = (data['receivedPackets'] as num).toInt();
+    }
+    if (data['verifiedProofs'] is num) {
+      verifiedProofs = (data['verifiedProofs'] as num).toInt();
+    }
+    if (data['rejectedProofs'] is num) {
+      rejectedProofs = (data['rejectedProofs'] as num).toInt();
+    }
+    final value = data['error'];
+    error = value == null ? null : value.toString();
     notifyListeners();
   }
 
