@@ -74,7 +74,7 @@ class TelemetryService {
         jsonEncode({
           'installation_id': store.installationId,
           'country': store.settings.country,
-          'app_version': '0.8.1',
+          'app_version': '0.8.2',
         }),
       );
       final response = await request.close();
