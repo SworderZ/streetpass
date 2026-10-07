@@ -29,8 +29,9 @@ class UpdateService {
         'application/vnd.github+json',
       );
       final response = await request.close();
-      if (response.statusCode != 200)
+      if (response.statusCode != 200) {
         throw HttpException('GitHub: HTTP ${response.statusCode}');
+      }
       final data = jsonDecode(
         await response.transform(utf8.decoder).join(),
       ) as Map<String, dynamic>;
@@ -53,15 +54,16 @@ int _version(String value) {
       .split('.')
       .map((part) => int.tryParse(part) ?? 0)
       .toList();
-  return (parts.length > 0 ? parts[0] : 0) * 1000000 +
+  return (parts.isNotEmpty ? parts[0] : 0) * 1000000 +
       (parts.length > 1 ? parts[1] : 0) * 1000 +
       (parts.length > 2 ? parts[2] : 0);
 }
 
 class TelemetryService {
   static Future<bool> send(AppStore store) async {
-    if (!store.settings.shareStats || store.settings.country.isEmpty)
+    if (!store.settings.shareStats || store.settings.country.isEmpty) {
       return false;
+    }
     final client = HttpClient();
     try {
       final request = await client.postUrl(

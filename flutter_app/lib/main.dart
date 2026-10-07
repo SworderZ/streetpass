@@ -58,8 +58,12 @@ class _StreetPassAppState extends State<StreetPassApp> {
   }
 
   void _onForegroundData(Object data) {
-    if (!mounted || store == null || data is! Map || data['type'] != 'meeting')
+    if (!mounted ||
+        store == null ||
+        data is! Map ||
+        data['type'] != 'meeting') {
       return;
+    }
     store!.changed();
   }
 
@@ -731,15 +735,17 @@ class _SettingsPageState extends State<SettingsPage> {
                         final info = await UpdateService.check(
                           version ?? '0.0.0',
                         );
-                        if (mounted)
+                        if (mounted) {
                           updateMessage = info.available
                               ? 'Доступна новая версия ${info.latest}'
                               : 'Установлена последняя версия';
-                        if (info.available)
+                        }
+                        if (info.available) {
                           await launchUrl(
                             Uri.parse(info.url),
                             mode: LaunchMode.externalApplication,
                           );
+                        }
                       } catch (error) {
                         if (mounted) updateMessage = 'Ошибка проверки: $error';
                       } finally {
