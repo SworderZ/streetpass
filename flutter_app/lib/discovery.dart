@@ -56,22 +56,10 @@ class SystemBleTransport implements BleTransport {
   @override
   Future<void> scan(void Function(BleDevice) onPacket) async {
     _packets ??= UniversalBle.scanStream.listen(onPacket);
-    // Windows и BlueZ доставляют scan-response отдельно от главного пакета.
-    // Там фильтр по service UUID теряет части подписи; отбор делаем по payload.
-    await UniversalBle.startScan(
-      scanFilter: Platform.isAndroid
-          ? ScanFilter(
-              withManufacturerData: [
-                ManufacturerDataFilter(
-                  companyIdentifier: companyId,
-                  payloadPrefix: Uint8List.fromList(
-                    StreetPassCrypto.packetPrefix,
-                  ),
-                ),
-              ],
-            )
-          : null,
-    );
+    // Do not use a native Android scan filter here. Android vendors and BLE
+    // stacks expose manufacturer data differently; filtering in Dart keeps
+    // the StreetPass packet visible on both Android and desktop adapters.
+    await UniversalBle.startScan();
   }
 
   @override
