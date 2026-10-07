@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:launch_at_startup/launch_at_startup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
@@ -97,20 +96,57 @@ class DesktopShellController with TrayListener, WindowListener {
     if (!supported) return;
     _closeToTray = settings.closeToTray;
     try {
-      launchAtStartup.setup(
-        appName: 'StreetPass',
-        appPath: Platform.resolvedExecutable,
-        packageName: 'space.megaworld.streetpass.crossplatform',
-      );
-      if (settings.desktopAutoStart) {
-        await launchAtStartup.enable();
-      } else {
-        await launchAtStartup.disable();
-      }
+      await _setAutoStart(settings.desktopAutoStart);
     } catch (_) {
       // Startup registration is optional and must not block BLE discovery.
     }
     await windowManager.setPreventClose(_closeToTray);
+  }
+
+  Future<void> _setAutoStart(bool enabled) async {
+    if (Platform.isWindows) {
+      const key = r'HKCU\Software\Microsoft\Windows\CurrentVersion\Run';
+      if (enabled) {
+        await Process.run('reg.exe', [
+          'add',
+          key,
+          '/v',
+          'StreetPass',
+          '/t',
+          'REG_SZ',
+          '/d',
+          '"${Platform.resolvedExecutable}"',
+          '/f',
+        ]);
+      } else {
+        await Process.run('reg.exe', [
+          'delete',
+          key,
+          '/v',
+          'StreetPass',
+          '/f',
+        ]);
+      }
+      return;
+    }
+
+    if (Platform.isLinux) {
+      final home = Platform.environment['HOME'];
+      if (home == null || home.isEmpty) return;
+      final file = File('$home/.config/autostart/streetpass.desktop');
+      if (enabled) {
+        await file.parent.create(recursive: true);
+        await file.writeAsString('''[Desktop Entry]
+Type=Application
+Name=StreetPass
+Exec="${Platform.resolvedExecutable}"
+Terminal=false
+X-GNOME-Autostart-enabled=true
+''');
+      } else if (await file.exists()) {
+        await file.delete();
+      }
+    }
   }
 
   String? _findIconPath() {
