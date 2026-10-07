@@ -17,6 +17,9 @@ class AppSettings {
   bool storeRssi = true;
   bool shareStats = false;
   bool hideUpdatePrompt = false;
+  bool desktopAutoStart = false;
+  bool startMinimized = false;
+  bool closeToTray = true;
   int cooldownMinutes = 60;
   int minRssi = -95;
   String powerMode = 'balanced';
@@ -34,6 +37,9 @@ class AppSettings {
     storeRssi = data['storeRssi'] ?? true;
     shareStats = data['shareStats'] ?? false;
     hideUpdatePrompt = data['hideUpdatePrompt'] ?? false;
+    desktopAutoStart = data['desktopAutoStart'] ?? false;
+    startMinimized = data['startMinimized'] ?? false;
+    closeToTray = data['closeToTray'] ?? true;
     cooldownMinutes = (data['cooldownMinutes'] as int? ?? 60).clamp(5, 720);
     minRssi = (data['minRssi'] as int? ?? -95).clamp(-100, -40);
     powerMode = data['powerMode'] ?? 'balanced';
@@ -50,6 +56,9 @@ class AppSettings {
     'storeRssi': storeRssi,
     'shareStats': shareStats,
     'hideUpdatePrompt': hideUpdatePrompt,
+    'desktopAutoStart': desktopAutoStart,
+    'startMinimized': startMinimized,
+    'closeToTray': closeToTray,
     'cooldownMinutes': cooldownMinutes,
     'minRssi': minRssi,
     'powerMode': powerMode,

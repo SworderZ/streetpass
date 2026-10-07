@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'app_store.dart';
+import 'desktop_shell.dart';
 import 'discovery.dart';
 import 'foreground_service.dart';
 import 'network_services.dart';
@@ -18,8 +19,9 @@ import 'streetpass_crypto.dart';
 const statisticsUrl = 'https://streetpass.coolify.megaworld.space';
 const releasesUrl = 'https://github.com/SworderZ/streetpass/releases';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await DesktopShellController.initialize();
   runApp(const StreetPassApp());
 }
 
@@ -83,6 +85,7 @@ class _StreetPassAppState extends State<StreetPassApp> {
       await next.initialize();
       if (!mounted) return;
       setState(() => store = next);
+      await DesktopShellController.applySettings(next.settings);
       final initialLink = await AppLinks().getInitialLink();
       if (initialLink != null) await _handleInvite(initialLink.toString());
       if (next.settings.autoStart && next.settings.active) {
@@ -649,7 +652,7 @@ class _SettingsPageState extends State<SettingsPage> {
           },
         ),
         _SettingSwitch(
-          title: 'Запускать после перезагрузки',
+          title: 'Запускать поиск после перезагрузки',
           value: s.autoStart,
           onChanged: (value) {
             s.autoStart = value;
@@ -657,6 +660,42 @@ class _SettingsPageState extends State<SettingsPage> {
             setState(() {});
           },
         ),
+        if (DesktopShellController.supported) ...[
+          const Divider(height: 28),
+          Text(
+            'Работа в трее',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          _SettingSwitch(
+            title: 'Запускать StreetPass вместе с системой',
+            value: s.desktopAutoStart,
+            onChanged: (value) async {
+              s.desktopAutoStart = value;
+              await widget.store.save();
+              await DesktopShellController.applySettings(s);
+              if (mounted) setState(() {});
+            },
+          ),
+          _SettingSwitch(
+            title: 'Запускать сразу свёрнутым в трей',
+            value: s.startMinimized,
+            onChanged: (value) async {
+              s.startMinimized = value;
+              await widget.store.save();
+              if (mounted) setState(() {});
+            },
+          ),
+          _SettingSwitch(
+            title: 'Сворачивать в трей при закрытии окна',
+            value: s.closeToTray,
+            onChanged: (value) async {
+              s.closeToTray = value;
+              await widget.store.save();
+              await DesktopShellController.applySettings(s);
+              if (mounted) setState(() {});
+            },
+          ),
+        ],
         _SettingSwitch(
           title: 'Принимать неподписанные ID',
           value: s.acceptUnsigned,

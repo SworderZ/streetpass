@@ -44,6 +44,9 @@ dependencies:
   mobile_scanner: ^7.4.2
   flutter_foreground_task: ^11.0.0
   app_links: ^7.2.2
+  tray_manager: ^0.5.3
+  window_manager: ^0.5.2
+  launch_at_startup: ^0.5.1
 
 dev_dependencies:
   flutter_test:

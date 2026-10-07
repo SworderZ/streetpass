@@ -52,6 +52,7 @@ jobs:
           $version = $env:GITHUB_REF_NAME.Substring(1)
           flutter build windows --release --build-name="$version" --build-number="$env:GITHUB_RUN_NUMBER"
       - run: Copy-Item windows/README-Windows.txt build/windows/x64/runner/Release/README-Windows.txt
+      - run: Copy-Item windows/runner/resources/app_icon.ico build/windows/x64/runner/Release/app_icon.ico
       - run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "../streetpass-$env:GITHUB_REF_NAME-windows-x64.zip" -Force
       - uses: actions/upload-artifact@v4
         with:
@@ -71,10 +72,11 @@ jobs:
           flutter-version: '3.47.3'
           channel: stable
           cache: true
-      - run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev
+      - run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libayatana-appindicator3-dev
       - run: flutter pub get
       - run: flutter build linux --release --build-name="${GITHUB_REF_NAME#v}" --build-number="$GITHUB_RUN_NUMBER"
       - run: cp linux/README-Linux.txt build/linux/x64/release/bundle/README-Linux.txt
+      - run: cp windows/runner/resources/app_icon.ico build/linux/x64/release/bundle/app_icon.ico
       - run: tar -czf "../streetpass-${GITHUB_REF_NAME}-linux-x64.tar.gz" -C build/linux/x64/release/bundle .
       - uses: actions/upload-artifact@v4
         with:

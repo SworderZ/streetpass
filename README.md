@@ -27,7 +27,9 @@ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe). Run
 GitHub Actions builds Android, Windows and Linux artifacts on every relevant
 push. Android is built as separate release APKs by CPU architecture, so a
 normal arm64 phone downloads about 25 MB instead of a large universal debug APK.
-Version tags (`v*`) publish all three Flutter APKs to GitHub Releases.
+Version tags (`v*`) publish the Android APKs plus Windows and Linux desktop
+bundles to GitHub Releases. Desktop settings include tray mode and optional
+launch at login.
 
 The public statistics website is in [`website`](website), the backend is in
 [`backend`](backend), and the protocol notes are in [`SPEC.md`](SPEC.md).

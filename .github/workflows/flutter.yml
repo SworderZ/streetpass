@@ -27,9 +27,10 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev
+      - run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libayatana-appindicator3-dev
       - run: flutter build linux --release
       - run: cp linux/README-Linux.txt build/linux/x64/release/bundle/README-Linux.txt
+      - run: cp windows/runner/resources/app_icon.ico build/linux/x64/release/bundle/app_icon.ico
       - uses: actions/upload-artifact@v4
         with:
           name: streetpass-linux-release
@@ -69,6 +70,7 @@ jobs:
       - run: flutter pub get
       - run: flutter build windows --release
       - run: Copy-Item windows/README-Windows.txt build/windows/x64/runner/Release/README-Windows.txt
+      - run: Copy-Item windows/runner/resources/app_icon.ico build/windows/x64/runner/Release/app_icon.ico
       - uses: actions/upload-artifact@v4
         with:
           name: streetpass-windows-release

@@ -61,7 +61,6 @@ class SystemBleTransport implements BleTransport {
     await UniversalBle.startScan(
       scanFilter: Platform.isAndroid
           ? ScanFilter(
-              withServices: const [serviceUuid, proofUuid, nicknameUuid],
               withManufacturerData: [
                 ManufacturerDataFilter(
                   companyIdentifier: companyId,
