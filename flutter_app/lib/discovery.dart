@@ -44,7 +44,9 @@ class SystemBleTransport implements BleTransport {
   StreamSubscription<BleDevice>? _packets;
   @override
   Future<void> prepare() async {
-    if (Platform.isAndroid) await UniversalBle.requestPermissions();
+    if (Platform.isAndroid && !await UniversalBle.hasPermissions()) {
+      throw StateError('Bluetooth permissions were not granted');
+    }
     final availability = await UniversalBle.getBluetoothAvailabilityState();
     if (availability != AvailabilityState.poweredOn) {
       throw StateError('Bluetooth: ${availability.name}');

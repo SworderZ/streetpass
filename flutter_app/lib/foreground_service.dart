@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -61,6 +62,10 @@ class StreetPassTaskHandler extends TaskHandler {
 }
 
 class ForegroundController {
+  static const _permissionChannel = MethodChannel(
+    'space.megaworld.streetpass/permissions',
+  );
+
   static void initialize() {
     if (!Platform.isAndroid) return;
     FlutterForegroundTask.initCommunicationPort();
@@ -89,6 +94,14 @@ class ForegroundController {
 
   static Future<ServiceRequestResult?> start() async {
     if (!Platform.isAndroid) return null;
+    final permissions =
+        await _permissionChannel.invokeMethod<bool>(
+          'requestBluetoothPermissions',
+        ) ??
+        false;
+    if (!permissions) {
+      throw StateError('Bluetooth permissions were not granted');
+    }
     final permission =
         await FlutterForegroundTask.checkNotificationPermission();
     if (permission != NotificationPermission.granted) {
@@ -96,6 +109,7 @@ class ForegroundController {
     }
     return FlutterForegroundTask.startService(
       serviceId: 5350,
+      serviceTypes: const [ForegroundServiceTypes.connectedDevice],
       notificationTitle: 'StreetPass',
       notificationText: 'Запуск обнаружения…',
       callback: foregroundCallback,
