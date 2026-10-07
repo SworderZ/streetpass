@@ -67,12 +67,16 @@ class StreetPassCrypto {
     return Uint8List.fromList([1, ...publicKey, ...stamp, ...raw]);
   }
 
-  static List<Uint8List> desktopProofPackets(StreetPassIdentity identity) {
-    final proofBytes = proof(identity);
+  static List<Uint8List> desktopProofPackets(
+    StreetPassIdentity identity, {
+    int generation = 0,
+    int? timestamp,
+  }) {
+    final proofBytes = proof(identity, timestamp: timestamp);
     return List.generate(10, (index) {
       final from = index * 11;
       final length = (102 - from) < 11 ? (102 - from) : 11;
-      final header = index & 0x0f;
+      final header = ((generation & 15) << 4) | index;
       return Uint8List.fromList([
         ...packetPrefix,
         1,
@@ -85,6 +89,77 @@ class StreetPassCrypto {
 
   static final packetPrefix = const [0x53, 0x50, 0x01];
 
+  static Uint8List nicknameBytes(String value, {int maxBytes = 12}) {
+    final output = <int>[];
+    final clean = value
+        .replaceAll(RegExp(r'[\x00-\x1f\x7f]'), '')
+        .trim()
+        .replaceAll(RegExp(r'\s+'), ' ');
+    for (final rune in clean.runes) {
+      final piece = utf8.encode(String.fromCharCode(rune));
+      if (output.length + piece.length > maxBytes) break;
+      output.addAll(piece);
+    }
+    return Uint8List.fromList(utf8.encode(utf8.decode(output).trim()));
+  }
+
+  static String invite(StreetPassIdentity identity, String nickname) {
+    final bytes = nicknameBytes(nickname, maxBytes: 24);
+    final body = Uint8List.fromList([
+      1,
+      ...identity.publicKey.Q!.getEncoded(true),
+      bytes.length,
+      ...bytes,
+    ]);
+    final signer = ECDSASigner(SHA256Digest(), HMac(SHA256Digest(), 64))
+      ..init(true, PrivateKeyParameter<ECPrivateKey>(identity.privateKey));
+    final signature = signer.generateSignature(
+      Uint8List.fromList([...ascii.encode('StreetPass-invite-v1'), ...body]),
+    ) as ECSignature;
+    final payload = base64Url
+        .encode([...body, ..._bigInt(signature.r), ..._bigInt(signature.s)])
+        .replaceAll('=', '');
+    return 'streetpass://friend?invite=$payload';
+  }
+
+  static ({String peerId, String nickname})? parseInvite(String text) {
+    final match = RegExp(r'(?:[#?&])invite=([A-Za-z0-9_-]+)').firstMatch(text);
+    if (match == null || text.length > 8192) return null;
+    try {
+      final bytes = base64Url.decode(base64Url.normalize(match[1]!));
+      if (bytes.length < 99 || bytes[0] != 1) return null;
+      final count = bytes[34];
+      final bodyLength = 35 + count;
+      if (count > 24 || bytes.length != bodyLength + 64) return null;
+      final key = bytes.sublist(1, 34);
+      if (key[0] != 2 && key[0] != 3) return null;
+      final point = _curve.curve.decodePoint(key);
+      if (point == null || point.isInfinity) return null;
+      final signature = ECSignature(
+        _fromBytes(bytes.sublist(bodyLength, bodyLength + 32)),
+        _fromBytes(bytes.sublist(bodyLength + 32)),
+      );
+      final verifier = ECDSASigner(SHA256Digest())
+        ..init(false, PublicKeyParameter(ECPublicKey(point, _curve)));
+      if (!verifier.verifySignature(
+        Uint8List.fromList([
+          ...ascii.encode('StreetPass-invite-v1'),
+          ...bytes.sublist(0, bodyLength),
+        ]),
+        signature,
+      )) {
+        return null;
+      }
+      final nickname = utf8.decode(bytes.sublist(35, bodyLength));
+      return (
+        peerId: _id(key).map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
+        nickname: nickname,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   static bool verifyProof(
     Uint8List proof,
     Uint8List expectedPeerId, {
@@ -95,6 +170,7 @@ class StreetPassCrypto {
       return false;
     }
     final publicKeyBytes = proof.sublist(1, 34);
+    if (publicKeyBytes[0] != 2 && publicKeyBytes[0] != 3) return false;
     final calculatedPeerId = _id(publicKeyBytes);
     for (var i = 0; i < calculatedPeerId.length; i++) {
       if (calculatedPeerId[i] != expectedPeerId[i]) return false;

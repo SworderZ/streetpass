@@ -12,14 +12,14 @@ void main() {
     expect(find.text('Обнаружение'), findsOneWidget);
   });
 
-  testWidgets('settings dialog opens and saves nickname', (tester) async {
+  testWidgets('settings opens and saves nickname', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const StreetPassApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.tap(find.byIcon(Icons.settings_outlined).first);
     await tester.pumpAndSettle();
-    expect(find.text('Настройки'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'Test laptop');
     await tester.tap(find.text('Сохранить'));

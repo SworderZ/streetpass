@@ -8,5 +8,9 @@ Ubuntu:
 
   sudo apt install libgtk-3-0 bluez
 
-The Linux BLE backend can scan nearby devices. Peripheral advertising depends
-on the BlueZ setup and is not enabled by the current universal_ble release.
+On CachyOS/Arch, use:
+
+  sudo pacman -S gtk3 bluez bluez-utils
+  sudo systemctl enable --now bluetooth
+
+The client uses BlueZ D-Bus for both scanning and manufacturer-data advertising.

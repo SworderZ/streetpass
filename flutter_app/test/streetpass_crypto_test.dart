@@ -21,6 +21,13 @@ void main() {
       ),
       isTrue,
     );
+    final invite = StreetPassCrypto.invite(identity, 'Alice');
+    final parsedInvite = StreetPassCrypto.parseInvite(invite);
+    expect(
+      parsedInvite?.peerId,
+      identity.peerId.map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
+    );
+    expect(parsedInvite?.nickname, 'Alice');
     expect(packets, hasLength(10));
     expect(packets.first.sublist(0, 12), [
       0x53,

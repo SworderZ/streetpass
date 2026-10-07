@@ -1,20 +1,27 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:universal_ble/universal_ble.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import 'app_store.dart';
+import 'discovery.dart';
+import 'foreground_service.dart';
+import 'network_services.dart';
 import 'streetpass_crypto.dart';
 
-const companyId = 0xffff;
-const packetPrefix = <int>[0x53, 0x50, 0x01];
-const serviceUuid = '00005350-0000-1000-8000-00805f9b34fb';
-const nicknameUuid = '00005351-0000-1000-8000-00805f9b34fb';
-const proofUuid = '00005352-0000-1000-8000-00805f9b34fb';
+const statisticsUrl = 'https://streetpass.coolify.megaworld.space';
+const releasesUrl = 'https://github.com/SworderZ/streetpass/releases';
 
-void main() => runApp(const StreetPassApp());
+void main() {
+  ForegroundController.initialize();
+  runApp(const StreetPassApp());
+}
 
 class StreetPassApp extends StatefulWidget {
   const StreetPassApp({super.key});
@@ -23,74 +30,121 @@ class StreetPassApp extends StatefulWidget {
 }
 
 class _StreetPassAppState extends State<StreetPassApp> {
-  final service = DesktopStreetPassService();
-  bool running = false;
-  bool loading = true;
-  String nickname = '';
-  List<Meeting> meetings = [];
+  AppStore? store;
+  late final DiscoveryService discovery = DiscoveryService();
+  StreamSubscription<Uri>? _linkSubscription;
+  String? startupError;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    if (ForegroundController.supported) {
+      FlutterForegroundTask.addTaskDataCallback(_onForegroundData);
+    }
+    _initialize();
+    _linkSubscription = AppLinks().uriLinkStream.listen(
+      (uri) => _handleInvite(uri.toString()),
+    );
   }
 
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    await service.initializeIdentity(prefs);
-    nickname = prefs.getString('nickname') ?? '';
-    final count = prefs.getInt('meeting_count') ?? 0;
-    meetings = List.generate(
-      count,
-      (i) => Meeting(
-        'StreetPass device',
-        DateTime.now().subtract(Duration(hours: i + 1)),
-      ),
+  Future<void> _handleInvite(String text) async {
+    final invite = StreetPassCrypto.parseInvite(text);
+    if (invite == null || store == null) return;
+    await store!.editPeer(
+      invite.peerId,
+      nickname: invite.nickname,
+      friend: true,
     );
-    setState(() => loading = false);
+  }
+
+  void _onForegroundData(Object data) {
+    if (!mounted || store == null || data is! Map || data['type'] != 'meeting')
+      return;
+    store!.changed();
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    if (ForegroundController.supported) {
+      FlutterForegroundTask.removeTaskDataCallback(_onForegroundData);
+    }
+    super.dispose();
+  }
+
+  Future<void> _initialize() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final next = AppStore(prefs);
+      await next.initialize();
+      if (!mounted) return;
+      setState(() => store = next);
+      final initialLink = await AppLinks().getInitialLink();
+      if (initialLink != null) await _handleInvite(initialLink.toString());
+      if (next.settings.autoStart && next.settings.active) {
+        unawaited(_toggle(true));
+      }
+    } catch (error) {
+      if (mounted) setState(() => startupError = '$error');
+    }
   }
 
   Future<void> _toggle(bool value) async {
+    final current = store;
+    if (current == null) return;
     try {
       if (value) {
-        await service.start(nickname, (meeting) async {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setInt('meeting_count', meetings.length + 1);
-          if (mounted) setState(() => meetings = [meeting, ...meetings]);
-        });
+        if (ForegroundController.supported) {
+          current.settings.active = true;
+          await current.save();
+          final result = await ForegroundController.start();
+          if (result is ServiceRequestFailure) throw result.error;
+          discovery.setUiActive(true);
+        } else {
+          await discovery.start(current, (sighting) async {
+            if (!sighting.verified && !current.settings.acceptUnsigned) return;
+            if (current.record(
+              sighting.peerId,
+              sighting.time,
+              name: sighting.nickname,
+              rssi: sighting.rssi,
+            )) {
+              await current.save();
+            }
+          });
+        }
       } else {
-        await service.stop();
+        if (ForegroundController.supported) {
+          await ForegroundController.stop();
+          discovery.setUiActive(false);
+        } else {
+          await discovery.stop();
+        }
       }
-      if (mounted) setState(() => running = value);
+      current.settings.active = value;
+      await current.save();
+      current.changed();
     } catch (error) {
-      await service.stop();
-      if (!mounted) return;
-      setState(() => running = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(_bleError(error))));
+      if (ForegroundController.supported) {
+        await ForegroundController.stop();
+        discovery.setUiActive(false);
+      } else {
+        await discovery.stop();
+      }
+      current.settings.active = false;
+      current.changed();
+      if (mounted) {
+        setState(() => startupError = _friendlyBleError(error));
+      }
     }
-  }
-
-  static String _bleError(Object error) {
-    final message = error.toString().replaceFirst('Bad state: ', '');
-    if (message.contains('Bluetooth is off')) {
-      return 'Включите Bluetooth и попробуйте ещё раз';
-    }
-    if (message.contains('peripheral advertising')) {
-      return 'Этот Bluetooth-адаптер не умеет BLE-рекламу';
-    }
-    return 'Не удалось запустить Bluetooth: $message';
-  }
-
-  Future<void> _saveNickname(String value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('nickname', value);
-    service.nickname = value;
-    setState(() => nickname = value);
   }
 
   @override
   Widget build(BuildContext context) {
+    if (startupError != null && store == null) {
+      return MaterialApp(home: ErrorPage(message: startupError!));
+    }
+    final current = store;
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -101,22 +155,134 @@ class _StreetPassAppState extends State<StreetPassApp> {
           brightness: Brightness.dark,
         ),
         cardTheme: const CardThemeData(color: Color(0xff171719)),
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(),
+        ),
       ),
-      home: loading
+      home: current == null
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-          : Builder(
-              builder: (homeContext) => HomePage(
-                running: running,
-                meetings: meetings,
-                nickname: nickname,
+          : AnimatedBuilder(
+              animation: Listenable.merge([current, discovery]),
+              builder: (_, _) => AppShell(
+                store: current,
+                discovery: discovery,
+                error: startupError,
                 onToggle: _toggle,
-                onOpenSettings: () => showDialog<void>(
-                  context: homeContext,
-                  builder: (_) =>
-                      SettingsDialog(nickname: nickname, onSave: _saveNickname),
-                ),
+                onClearError: () => setState(() => startupError = null),
               ),
             ),
+    );
+  }
+}
+
+String _friendlyBleError(Object error) {
+  final value = error.toString().replaceFirst('Bad state: ', '');
+  if (value.contains('poweredOff') || value.contains('Bluetooth is off')) {
+    return 'Включите Bluetooth и попробуйте ещё раз.';
+  }
+  if (value.contains('peripheral advertising')) {
+    return 'Адаптер не умеет BLE-рекламу. Сканирование всё ещё можно включить отдельно.';
+  }
+  if (value.contains('BlueZ')) {
+    return '$value. Проверьте, что Bluetooth включён и запущен сервис bluez.';
+  }
+  return 'Bluetooth не запустился: $value';
+}
+
+class ErrorPage extends StatelessWidget {
+  const ErrorPage({super.key, required this.message});
+  final String message;
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(
+      child: Padding(padding: const EdgeInsets.all(24), child: Text(message)),
+    ),
+  );
+}
+
+class AppShell extends StatefulWidget {
+  const AppShell({
+    super.key,
+    required this.store,
+    required this.discovery,
+    required this.onToggle,
+    required this.onClearError,
+    this.error,
+  });
+  final AppStore store;
+  final DiscoveryService discovery;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onClearError;
+  final String? error;
+  @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  int tab = 0;
+  @override
+  Widget build(BuildContext context) {
+    final pages = [
+      HomePage(
+        store: widget.store,
+        discovery: widget.discovery,
+        onToggle: widget.onToggle,
+      ),
+      HistoryPage(store: widget.store),
+      StatsPage(store: widget.store),
+      SettingsPage(store: widget.store, discovery: widget.discovery),
+    ];
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('StreetPass'),
+        actions: [
+          IconButton(
+            tooltip: 'Статистика сообщества',
+            icon: const Icon(Icons.public),
+            onPressed: () => launchUrl(
+              Uri.parse(statisticsUrl),
+              mode: LaunchMode.externalApplication,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Настройки',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => setState(() => tab = 3),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          if (widget.error != null)
+            MaterialBanner(
+              content: Text(widget.error!),
+              leading: const Icon(Icons.warning_amber_rounded),
+              actions: [
+                TextButton(
+                  onPressed: widget.onClearError,
+                  child: const Text('Закрыть'),
+                ),
+              ],
+            ),
+          Expanded(child: pages[tab]),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: tab,
+        onDestinationSelected: (value) => setState(() => tab = value),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.radar), label: 'Рядом'),
+          NavigationDestination(icon: Icon(Icons.history), label: 'История'),
+          NavigationDestination(
+            icon: Icon(Icons.insights),
+            label: 'Статистика',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            label: 'Настройки',
+          ),
+        ],
+      ),
     );
   }
 }
@@ -124,114 +290,709 @@ class _StreetPassAppState extends State<StreetPassApp> {
 class HomePage extends StatelessWidget {
   const HomePage({
     super.key,
-    required this.running,
-    required this.meetings,
-    required this.nickname,
+    required this.store,
+    required this.discovery,
     required this.onToggle,
-    required this.onOpenSettings,
   });
-  final bool running;
-  final List<Meeting> meetings;
-  final String nickname;
+  final AppStore store;
+  final DiscoveryService discovery;
   final ValueChanged<bool> onToggle;
-  final VoidCallback onOpenSettings;
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('StreetPass'),
-        actions: [
-          IconButton(
-            onPressed: onOpenSettings,
-            icon: const Icon(Icons.settings_outlined),
+    final now = DateTime.now();
+    final nearby = store.nearby(now);
+    final today = store.between(
+      DateTime(now.year, now.month, now.day),
+      now.add(const Duration(days: 1)),
+    );
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        Text('Обнаружение', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 4),
+        Text(
+          discovery.running ? _discoveryStatus(discovery) : 'Выключено',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-        children: [
-          Text('Обнаружение', style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 6),
-          Text(
-            running ? 'Работает в фоне' : 'Выключено',
-            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 20),
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Искать людей рядом',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Искать людей рядом',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      Switch(value: running, onChanged: onToggle),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      _Stat(value: '${meetings.length}', label: 'встречи'),
-                      _Stat(
-                        value: nickname.isEmpty ? '—' : nickname,
-                        label: 'ваш ник',
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                    Switch(value: discovery.running, onChanged: onToggle),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _Metric(value: '${today.length}', label: 'встреч сегодня'),
+                    _Metric(
+                      value: '${store.peers.length}',
+                      label: 'людей всего',
+                    ),
+                    _Metric(
+                      value: store.nickname.isEmpty ? '—' : store.nickname,
+                      label: 'ваш ник',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.person_add_alt_1),
+            title: const Text('Добавить по приглашению'),
+            subtitle: const Text('Вставьте ссылку из сообщения или QR'),
+            onTap: () => showDialog<void>(
+              context: context,
+              builder: (_) => ImportInviteDialog(store: store),
+            ),
+          ),
+        ),
+        if (discovery.running) ...[
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: Icon(
+                discovery.broadcasting
+                    ? Icons.bluetooth_connected
+                    : Icons.bluetooth_searching,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              title: Text(
+                discovery.broadcasting
+                    ? 'Вас видят и вы ищете'
+                    : 'Поиск работает',
+              ),
+              subtitle: Text(
+                'Пакетов: ${discovery.receivedPackets} · подтверждено: ${discovery.verifiedProofs}',
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          Text('Последние встречи', style: theme.textTheme.titleLarge),
-          const SizedBox(height: 10),
-          if (meetings.isEmpty)
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(18),
-                child: Text(
-                  'Пока встреч нет. Включите обнаружение и держите устройство рядом с другими участниками.',
-                ),
-              ),
-            )
-          else
-            ...meetings.map(
-              (m) => Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.waving_hand_outlined),
-                  ),
-                  title: Text(m.name),
-                  subtitle: Text(_time(m.time)),
-                  trailing: const Icon(Icons.chevron_right),
-                ),
-              ),
-            ),
         ],
-      ),
+        const SizedBox(height: 22),
+        _SectionTitle(title: 'Рядом сейчас', trailing: '${nearby.length}'),
+        if (nearby.isEmpty)
+          const _EmptyCard(
+            text: 'Пока никого нет. Оставьте обнаружение включённым и подойдите ближе к другому устройству.',
+          )
+        else
+          ...nearby.map((peer) => PeerTile(store: store, peer: peer)),
+        const SizedBox(height: 22),
+        _SectionTitle(
+          title: 'Последние встречи',
+          trailing: '${store.encounters.length}',
+        ),
+        if (store.encounters.isEmpty)
+          const _EmptyCard(
+            text: 'Встречи появятся здесь после подтверждённого BLE-обмена.',
+          )
+        else
+          ...store.encounters.take(5).map((entry) {
+            final peer = store.peers[entry.peerId];
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const CircleAvatar(
+                child: Icon(Icons.waving_hand_outlined),
+              ),
+              title: Text(peer?.name ?? entry.peerId),
+              subtitle: Text(
+                '${_formatTime(entry.time)} · встреча №${entry.number}',
+              ),
+              trailing: peer?.friend == true
+                  ? const Icon(Icons.favorite, color: Colors.pinkAccent)
+                  : null,
+            );
+          }),
+      ],
     );
   }
 
-  static String _time(DateTime t) =>
-      '${t.day.toString().padLeft(2, '0')}.${t.month.toString().padLeft(2, '0')} ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+  static String _discoveryStatus(DiscoveryService service) =>
+      service.error ??
+      (service.scanning && service.broadcasting
+          ? 'Сканирование и реклама работают'
+          : service.scanning
+          ? 'Сканирование работает'
+          : 'Реклама работает');
 }
 
-class _Stat extends StatelessWidget {
-  const _Stat({required this.value, required this.label});
+class HistoryPage extends StatelessWidget {
+  const HistoryPage({super.key, required this.store});
+  final AppStore store;
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.all(16),
+    children: [
+      Text('История встреч', style: Theme.of(context).textTheme.headlineSmall),
+      const SizedBox(height: 12),
+      if (store.encounters.isEmpty)
+        const _EmptyCard(text: 'История пока пустая.')
+      else
+        ...store.encounters.map((entry) {
+          final peer = store.peers[entry.peerId];
+          return Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.handshake_outlined),
+              ),
+              title: Text(peer?.name ?? entry.peerId),
+              subtitle: Text(
+                '${_formatDate(entry.time)} · встреча №${entry.number}',
+              ),
+              trailing: peer?.friend == true
+                  ? const Icon(Icons.favorite, color: Colors.pinkAccent)
+                  : null,
+              onTap: peer == null
+                  ? null
+                  : () => showDialog<void>(
+                      context: context,
+                      builder: (_) => PeerDialog(store: store, peer: peer),
+                    ),
+            ),
+          );
+        }),
+    ],
+  );
+}
+
+class StatsPage extends StatelessWidget {
+  const StatsPage({super.key, required this.store});
+  final AppStore store;
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = store.between(
+      DateTime(now.year, now.month, now.day),
+      now.add(const Duration(days: 1)),
+    );
+    final week = store.between(
+      DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6)),
+      now.add(const Duration(days: 1)),
+    );
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('Статистика', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Wrap(
+              spacing: 24,
+              runSpacing: 18,
+              children: [
+                _StatBlock('${today.length}', 'сегодня'),
+                _StatBlock('${store.people(today)}', 'людей сегодня'),
+                _StatBlock('${week.length}', 'за 7 дней'),
+                _StatBlock('${store.peers.length}', 'людей всего'),
+                _StatBlock('${store.encounters.length}', 'встреч всего'),
+                _StatBlock('${store.friends.length}', 'друзей'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        _SectionTitle(title: 'Друзья', trailing: '${store.friends.length}'),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.qr_code_2),
+            title: const Text('Моё приглашение'),
+            subtitle: const Text('Покажите QR-код другому пользователю'),
+            onTap: () => showDialog<void>(
+              context: context,
+              builder: (_) => InviteDialog(store: store),
+            ),
+          ),
+        ),
+        if (store.friends.isEmpty)
+          const _EmptyCard(text: 'Отметьте человека другом в истории встреч.'),
+        ...store.friends.map((peer) => PeerTile(store: store, peer: peer)),
+        const SizedBox(height: 18),
+        _SectionTitle(
+          title: 'Достижения',
+          trailing: '${store.unlocked.length}/${Achievement.all.length}',
+        ),
+        ...Achievement.all.map((achievement) {
+          final value = store.metric(achievement.kind);
+          final unlocked = store.unlocked.containsKey(achievement.id);
+          return Card(
+            child: ListTile(
+              leading: Icon(
+                unlocked ? Icons.emoji_events : Icons.lock_outline,
+                color: unlocked ? Colors.amber : null,
+              ),
+              title: Text(
+                '${_achievementName(achievement.kind)} · ${achievement.threshold}',
+              ),
+              subtitle: LinearProgressIndicator(
+                value: (value / achievement.threshold).clamp(0, 1).toDouble(),
+              ),
+              trailing: Text('$value/${achievement.threshold}'),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({super.key, required this.store, required this.discovery});
+  final AppStore store;
+  final DiscoveryService discovery;
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  final nicknameController = TextEditingController();
+  String? version;
+  bool checking = false;
+  String? updateMessage;
+  @override
+  void initState() {
+    super.initState();
+    nicknameController.text = widget.store.nickname;
+    _version();
+  }
+
+  @override
+  void dispose() {
+    nicknameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _version() async {
+    final info = await PackageInfo.fromPlatform();
+    if (mounted) setState(() => version = info.version);
+  }
+
+  Future<void> _save() async {
+    widget.store.nickname =
+        StreetPassCrypto.nicknameBytes(
+          nicknameController.text,
+          maxBytes: 24,
+        ).isEmpty
+        ? ''
+        : nicknameController.text.trim();
+    await widget.store.save();
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Настройки сохранены')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.store.settings;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        Text('Настройки', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 12),
+        TextField(
+          controller: nicknameController,
+          maxLength: 24,
+          decoration: const InputDecoration(
+            labelText: 'Никнейм',
+            helperText: 'Передаётся рядом стоящим устройствам открытым текстом',
+          ),
+        ),
+        FilledButton.icon(
+          onPressed: _save,
+          icon: const Icon(Icons.save_outlined),
+          label: const Text('Сохранить'),
+        ),
+        const SizedBox(height: 18),
+        _SettingSwitch(
+          title: 'Передавать свой ID',
+          value: s.advertise,
+          onChanged: (value) {
+            s.advertise = value;
+            widget.store.save();
+            setState(() {});
+          },
+        ),
+        _SettingSwitch(
+          title: 'Искать других',
+          value: s.scan,
+          onChanged: (value) {
+            s.scan = value;
+            widget.store.save();
+            setState(() {});
+          },
+        ),
+        _SettingSwitch(
+          title: 'Запускать после перезагрузки',
+          value: s.autoStart,
+          onChanged: (value) {
+            s.autoStart = value;
+            widget.store.save();
+            setState(() {});
+          },
+        ),
+        _SettingSwitch(
+          title: 'Принимать неподписанные ID',
+          value: s.acceptUnsigned,
+          onChanged: (value) {
+            s.acceptUnsigned = value;
+            widget.store.save();
+            setState(() {});
+          },
+        ),
+        _SettingSwitch(
+          title: 'Участвовать в общей статистике',
+          value: s.shareStats,
+          onChanged: (value) {
+            s.shareStats = value;
+            widget.store.save();
+            unawaited(TelemetryService.send(widget.store));
+            setState(() {});
+          },
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Профиль энергопотребления',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'saver', label: Text('Эконом')),
+            ButtonSegment(value: 'balanced', label: Text('Баланс')),
+            ButtonSegment(value: 'max', label: Text('Макс')),
+          ],
+          selected: {s.powerMode},
+          onSelectionChanged: (value) {
+            s.powerMode = value.first;
+            widget.store.save();
+            setState(() {});
+          },
+        ),
+        const SizedBox(height: 12),
+        Text('Повторная встреча через ${s.cooldownMinutes} мин'),
+        Slider(
+          min: 5,
+          max: 720,
+          divisions: 143,
+          value: s.cooldownMinutes.toDouble(),
+          label: '${s.cooldownMinutes}',
+          onChanged: (value) {
+            s.cooldownMinutes = value.round();
+            setState(() {});
+          },
+          onChangeEnd: (_) => widget.store.save(),
+        ),
+        Text('Минимальный сигнал: ${s.minRssi} dBm'),
+        Slider(
+          min: -100,
+          max: -40,
+          divisions: 60,
+          value: s.minRssi.toDouble(),
+          onChanged: (value) {
+            s.minRssi = value.round();
+            setState(() {});
+          },
+          onChangeEnd: (_) => widget.store.save(),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: ListTile(
+            title: Text('Версия ${version ?? '…'}'),
+            subtitle: Text(
+              updateMessage ?? 'Релизы Flutter-клиента публикуются на GitHub',
+            ),
+            trailing: checking
+                ? const CircularProgressIndicator()
+                : TextButton(
+                    onPressed: () async {
+                      setState(() {
+                        checking = true;
+                        updateMessage = null;
+                      });
+                      try {
+                        final info = await UpdateService.check(
+                          version ?? '0.0.0',
+                        );
+                        if (mounted)
+                          updateMessage = info.available
+                              ? 'Доступна новая версия ${info.latest}'
+                              : 'Установлена последняя версия';
+                        if (info.available)
+                          await launchUrl(
+                            Uri.parse(info.url),
+                            mode: LaunchMode.externalApplication,
+                          );
+                      } catch (error) {
+                        if (mounted) updateMessage = 'Ошибка проверки: $error';
+                      } finally {
+                        if (mounted) setState(() => checking = false);
+                      }
+                    },
+                    child: const Text('Проверить'),
+                  ),
+          ),
+        ),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.public),
+            title: const Text('Карта сообщества'),
+            subtitle: const Text(statisticsUrl),
+            onTap: () => launchUrl(
+              Uri.parse(statisticsUrl),
+              mode: LaunchMode.externalApplication,
+            ),
+          ),
+        ),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.vpn_key_outlined),
+            title: const Text('Ваш ID'),
+            subtitle: Text(widget.store.ownId),
+            onTap: () => showDialog<void>(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: const Text('Анонимный ID'),
+                content: SelectableText(widget.store.ownId),
+              ),
+            ),
+          ),
+        ),
+        OutlinedButton.icon(
+          onPressed: () async {
+            await widget.store.clearHistory();
+            if (mounted) setState(() {});
+          },
+          icon: const Icon(Icons.delete_outline),
+          label: const Text('Очистить историю'),
+        ),
+        OutlinedButton.icon(
+          onPressed: () async {
+            await widget.store.rotateIdentity();
+            if (mounted) setState(() {});
+          },
+          icon: const Icon(Icons.refresh),
+          label: const Text('Сменить ID'),
+        ),
+      ],
+    );
+  }
+}
+
+class InviteDialog extends StatelessWidget {
+  const InviteDialog({super.key, required this.store});
+  final AppStore store;
+  @override
+  Widget build(BuildContext context) {
+    final link = StreetPassCrypto.invite(store.identity, store.nickname);
+    return AlertDialog(
+      title: const Text('Моё приглашение'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            QrImageView(data: link, size: 220, backgroundColor: Colors.white),
+            const SizedBox(height: 12),
+            SelectableText(link, style: const TextStyle(fontSize: 11)),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Закрыть'),
+        ),
+      ],
+    );
+  }
+}
+
+class ImportInviteDialog extends StatefulWidget {
+  const ImportInviteDialog({super.key, required this.store});
+  final AppStore store;
+  @override
+  State<ImportInviteDialog> createState() => _ImportInviteDialogState();
+}
+
+class _ImportInviteDialogState extends State<ImportInviteDialog> {
+  final controller = TextEditingController();
+  String? error;
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Добавить друга'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: controller,
+          minLines: 2,
+          maxLines: 4,
+          decoration: const InputDecoration(labelText: 'Ссылка-приглашение'),
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: () async {
+              final value = await Navigator.push<String>(
+                context,
+                MaterialPageRoute(builder: (_) => const QrScannerPage()),
+              );
+              if (value != null) controller.text = value;
+            },
+            icon: const Icon(Icons.qr_code_scanner),
+            label: const Text('Сканировать QR'),
+          ),
+        ),
+        if (error != null)
+          Text(
+            error!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Отмена'),
+      ),
+      FilledButton(
+        onPressed: () async {
+          final invite = StreetPassCrypto.parseInvite(controller.text);
+          if (invite == null) {
+            setState(
+              () => error = 'Ссылка повреждена или подпись не совпадает',
+            );
+            return;
+          }
+          await widget.store.editPeer(
+            invite.peerId,
+            nickname: invite.nickname,
+            friend: true,
+          );
+          if (context.mounted) Navigator.pop(context);
+        },
+        child: const Text('Добавить'),
+      ),
+    ],
+  );
+}
+
+class QrScannerPage extends StatelessWidget {
+  const QrScannerPage({super.key});
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Сканировать приглашение')),
+    body: MobileScanner(
+      onDetect: (capture) {
+        final value = capture.barcodes
+            .map((barcode) => barcode.rawValue)
+            .whereType<String>()
+            .firstOrNull;
+        if (value != null) Navigator.pop(context, value);
+      },
+    ),
+  );
+}
+
+class PeerDialog extends StatefulWidget {
+  const PeerDialog({super.key, required this.store, required this.peer});
+  final AppStore store;
+  final Peer peer;
+  @override
+  State<PeerDialog> createState() => _PeerDialogState();
+}
+
+class _PeerDialogState extends State<PeerDialog> {
+  late final controller = TextEditingController(text: widget.peer.alias);
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.peer.name),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('Встреч: ${widget.peer.count}'),
+        TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Локальное имя'),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Отмена'),
+      ),
+      FilledButton(
+        onPressed: () async {
+          await widget.store.editPeer(
+            widget.peer.id,
+            alias: controller.text,
+            friend: !widget.peer.friend,
+          );
+          if (context.mounted) Navigator.pop(context);
+        },
+        child: Text(
+          widget.peer.friend ? 'Убрать из друзей' : 'Добавить в друзья',
+        ),
+      ),
+    ],
+  );
+}
+
+class PeerTile extends StatelessWidget {
+  const PeerTile({super.key, required this.store, required this.peer});
+  final AppStore store;
+  final Peer peer;
+  @override
+  Widget build(BuildContext context) => Card(
+    child: ListTile(
+      leading: CircleAvatar(
+        child: Icon(peer.friend ? Icons.favorite : Icons.person_outline),
+      ),
+      title: Text(peer.name),
+      subtitle: Text('${peer.count} встреч · ${peer.id}'),
+      trailing: peer.friend
+          ? const Icon(Icons.favorite, color: Colors.pinkAccent)
+          : null,
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (_) => PeerDialog(store: store, peer: peer),
+      ),
+    ),
+  );
+}
+
+class _Metric extends StatelessWidget {
+  const _Metric({required this.value, required this.label});
   final String value;
   final String label;
   @override
@@ -241,7 +1002,8 @@ class _Stat extends StatelessWidget {
       children: [
         Text(
           value,
-          style: Theme.of(context).textTheme.headlineMedium
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleLarge
               ?.copyWith(color: Theme.of(context).colorScheme.primary),
         ),
         Text(
@@ -255,355 +1017,79 @@ class _Stat extends StatelessWidget {
   );
 }
 
-class Meeting {
-  Meeting(this.name, this.time);
-  final String name;
-  final DateTime time;
-}
-
-class SettingsDialog extends StatefulWidget {
-  const SettingsDialog({
-    super.key,
-    required this.nickname,
-    required this.onSave,
-  });
-  final String nickname;
-  final ValueChanged<String> onSave;
+class _MetricBlock extends StatelessWidget {
+  const _MetricBlock(this.value, this.label);
+  final String value, label;
   @override
-  State<SettingsDialog> createState() => _SettingsDialogState();
-}
-
-class _SettingsDialogState extends State<SettingsDialog> {
-  late final controller = TextEditingController(text: widget.nickname);
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Настройки'),
-    content: TextField(
-      controller: controller,
-      decoration: const InputDecoration(
-        labelText: 'Никнейм',
-        helperText: 'Виден рядом стоящим участникам',
-      ),
+  Widget build(BuildContext context) => SizedBox(
+    width: 120,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(value, style: Theme.of(context).textTheme.headlineSmall),
+        Text(label),
+      ],
     ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Отмена'),
-      ),
-      FilledButton(
-        onPressed: () {
-          widget.onSave(controller.text.trim());
-          Navigator.pop(context);
-        },
-        child: const Text('Сохранить'),
+  );
+}
+
+class _StatBlock extends _MetricBlock {
+  const _StatBlock(super.value, super.label);
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title, required this.trailing});
+  final String title, trailing;
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Text(title, style: Theme.of(context).textTheme.titleLarge),
+      Text(
+        trailing,
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
     ],
   );
 }
 
-class DesktopStreetPassService {
-  String nickname = '';
-  DesktopScanner? scanner;
-  StreetPassIdentity? identity;
-  bool advertising = false;
-  Timer? _advertisementRotation;
-  List<Uint8List> _advertisementPackets = const [];
-  int _advertisementIndex = 0;
-  bool _publishingAdvertisement = false;
-
-  Future<void> initializeIdentity(SharedPreferences prefs) async {
-    final stored = prefs.getString('identity_private_scalar');
-    if (stored != null) {
-      try {
-        identity = StreetPassCrypto.fromPrivateScalarHex(stored);
-        return;
-      } catch (_) {}
-    }
-    identity = StreetPassCrypto.create();
-    await prefs.setString(
-      'identity_private_scalar',
-      StreetPassCrypto.privateScalarHex(identity!),
-    );
-  }
-
-  Future<void> start(String value, void Function(Meeting) onMeeting) async {
-    nickname = value;
-    final currentIdentity = identity ??= StreetPassCrypto.create();
-    await UniversalBle.requestPermissions(withAndroidFineLocation: true);
-    final availability = await UniversalBle.getBluetoothAvailabilityState();
-    if (availability != AvailabilityState.poweredOn) {
-      throw StateError('Bluetooth is off or unavailable: ${availability.name}');
-    }
-    final capabilities = await UniversalBlePeripheral.getCapabilities();
-    if (!capabilities.supportsPeripheralMode ||
-        !capabilities.supportsManufacturerDataInAdvertisement) {
-      throw StateError('peripheral advertising is unavailable');
-    }
-
-    final nextScanner = DesktopScanner(
-      onMeeting,
-      ignoredPeerId: currentIdentity.peerId,
-    );
-    scanner = nextScanner;
-    try {
-      await nextScanner.start();
-      _advertisementPackets = StreetPassCrypto.desktopProofPackets(
-        currentIdentity,
-      );
-      if (nickname.trim().isNotEmpty) {
-        final nicknameBytes = utf8.encode(nickname.trim()).take(12).toList();
-        _advertisementPackets = [
-          ..._advertisementPackets,
-          Uint8List.fromList([
-            ...packetPrefix,
-            0,
-            ...currentIdentity.peerId,
-            ...nicknameBytes,
-          ]),
-        ];
-      }
-      _advertisementIndex = 0;
-      await _publishNextAdvertisement();
-      if (!advertising) {
-        throw StateError('peripheral advertising failed');
-      }
-      _advertisementRotation = Timer.periodic(
-        const Duration(milliseconds: 350),
-        (_) => unawaited(_publishNextAdvertisement()),
-      );
-    } catch (_) {
-      await stop();
-      rethrow;
-    }
-  }
-
-  Future<void> stop() async {
-    _advertisementRotation?.cancel();
-    _advertisementRotation = null;
-    await scanner?.stop();
-    scanner = null;
-    if (advertising) {
-      try {
-        await UniversalBlePeripheral.stopAdvertising();
-      } catch (_) {}
-      advertising = false;
-    }
-  }
-
-  Future<void> _publishNextAdvertisement() async {
-    if (_advertisementPackets.isEmpty || _publishingAdvertisement) return;
-    _publishingAdvertisement = true;
-    try {
-      if (advertising) {
-        try {
-          await UniversalBlePeripheral.stopAdvertising();
-        } catch (_) {}
-      }
-      final packet = _advertisementPackets[_advertisementIndex];
-      _advertisementIndex =
-          (_advertisementIndex + 1) % _advertisementPackets.length;
-      await UniversalBlePeripheral.startAdvertising(
-        services: const [],
-        manufacturerData: ManufacturerData(companyId, packet),
-      );
-      advertising = true;
-    } catch (_) {
-      advertising = false;
-    } finally {
-      _publishingAdvertisement = false;
-    }
-  }
+class _EmptyCard extends StatelessWidget {
+  const _EmptyCard({required this.text});
+  final String text;
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(padding: const EdgeInsets.all(16), child: Text(text)),
+  );
 }
 
-class DesktopScanner {
-  DesktopScanner(this.onMeeting, {required this.ignoredPeerId});
-  final void Function(Meeting) onMeeting;
-  final Uint8List ignoredPeerId;
-  final _desktopAssemblies = <String, _ProofAssembly>{};
-  final _androidAssemblies = <String, _ProofAssembly>{};
-  final _nicknames = <String, String>{};
-  final _lastMeetings = <String, DateTime>{};
-
-  Future<void> start() async {
-    UniversalBle.onScanResult = (result) {
-      final now = DateTime.now();
-      for (final data in result.manufacturerDataList) {
-        if (data.companyId == companyId &&
-            data.payload.length >= 12 &&
-            _hasPrefix(data.payload)) {
-          _handleDesktop(data.payload, now);
-        }
-      }
-      _handleAndroid(result.serviceData, now);
-    };
-    await UniversalBle.startScan(
-      scanFilter: ScanFilter(
-        withServices: const [serviceUuid],
-        withManufacturerData: [
-          ManufacturerDataFilter(
-            companyIdentifier: companyId,
-            payloadPrefix: Uint8List.fromList(packetPrefix),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> stop() async {
-    UniversalBle.onScanResult = null;
-    await UniversalBle.stopScan();
-    _desktopAssemblies.clear();
-    _androidAssemblies.clear();
-    _nicknames.clear();
-    _lastMeetings.clear();
-  }
-
-  void _handleDesktop(Uint8List payload, DateTime now) {
-    final peerId = Uint8List.fromList(payload.sublist(4, 12));
-    if (_sameId(peerId, ignoredPeerId)) return;
-    final key = _hex(peerId);
-    final kind = payload[3];
-    if (kind == 0) {
-      try {
-        final value = utf8
-            .decode(payload.sublist(12), allowMalformed: false)
-            .trim();
-        if (value.isNotEmpty) _nicknames[key] = value;
-      } catch (_) {}
-      return;
-    }
-    if (kind != 1 || payload.length < 14) return;
-    final header = payload[12];
-    final index = header & 0x0f;
-    final generation = header >> 4;
-    final length = index == 9 ? 3 : 11;
-    if (index >= 10 || payload.length != 13 + length) return;
-    final proof = _accept(
-      _desktopAssemblies,
-      key,
-      generation,
-      index,
-      payload.sublist(13),
-      11,
-      10,
-    );
-    if (proof != null && StreetPassCrypto.verifyProof(proof, peerId)) {
-      _notify(key, _nicknames[key] ?? 'StreetPass device', now);
-    }
-  }
-
-  void _handleAndroid(Map<String, Uint8List> data, DateTime now) {
-    final peerId = data[serviceUuid];
-    if (peerId == null ||
-        peerId.length != 8 ||
-        _sameId(peerId, ignoredPeerId)) {
-      return;
-    }
-    final key = _hex(peerId);
-    final nickname = data[nicknameUuid];
-    if (nickname != null) {
-      try {
-        final value = utf8.decode(nickname, allowMalformed: false).trim();
-        if (value.isNotEmpty) _nicknames[key] = value;
-      } catch (_) {}
-    }
-    final frame = data[proofUuid];
-    if (frame == null || frame.length < 2) return;
-    final header = frame[0];
-    final index = header & 0x07;
-    final generation = header >> 3;
-    final length = index == 3 ? 24 : 26;
-    if (index >= 4 || frame.length != length + 1) return;
-    final proof = _accept(
-      _androidAssemblies,
-      key,
-      generation,
-      index,
-      frame.sublist(1),
-      26,
-      4,
-    );
-    if (proof != null && StreetPassCrypto.verifyProof(proof, peerId)) {
-      _notify(key, _nicknames[key] ?? 'StreetPass device', now);
-    }
-  }
-
-  Uint8List? _accept(
-    Map<String, _ProofAssembly> assemblies,
-    String key,
-    int generation,
-    int index,
-    List<int> bytes,
-    int chunkBytes,
-    int chunkCount,
-  ) {
-    final assembly = assemblies.putIfAbsent(
-      key,
-      () => _ProofAssembly(chunkBytes: chunkBytes, chunkCount: chunkCount),
-    );
-    if (assembly.generation != generation) assembly.reset(generation);
-    assembly.add(index, bytes);
-    return assembly.complete ? assembly.proof() : null;
-  }
-
-  void _notify(String key, String name, DateTime now) {
-    final previous = _lastMeetings[key];
-    if (previous != null &&
-        now.difference(previous) < const Duration(seconds: 10)) {
-      return;
-    }
-    _lastMeetings[key] = now;
-    onMeeting(Meeting(name, now));
-  }
-
-  static bool _sameId(List<int> left, List<int> right) {
-    if (left.length != right.length) return false;
-    for (var i = 0; i < left.length; i++) {
-      if (left[i] != right[i]) return false;
-    }
-    return true;
-  }
-
-  static String _hex(List<int> bytes) =>
-      bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
-
-  static bool _hasPrefix(Uint8List data) =>
-      data.length >= 3 &&
-      data[0] == packetPrefix[0] &&
-      data[1] == packetPrefix[1] &&
-      data[2] == packetPrefix[2];
+class _SettingSwitch extends StatelessWidget {
+  const _SettingSwitch({
+    required this.title,
+    required this.value,
+    required this.onChanged,
+  });
+  final String title;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  @override
+  Widget build(BuildContext context) => SwitchListTile(
+    contentPadding: EdgeInsets.zero,
+    title: Text(title),
+    value: value,
+    onChanged: onChanged,
+  );
 }
 
-class _ProofAssembly {
-  _ProofAssembly({required this.chunkBytes, required this.chunkCount});
-
-  final int chunkBytes;
-  final int chunkCount;
-  int generation = -1;
-  int received = 0;
-  final buffer = Uint8List(102);
-
-  void reset(int value) {
-    generation = value;
-    received = 0;
-    buffer.fillRange(0, buffer.length, 0);
-  }
-
-  void add(int index, List<int> bytes) {
-    final offset = index * chunkBytes;
-    if (offset + bytes.length > buffer.length) return;
-    buffer.setRange(offset, offset + bytes.length, bytes);
-    received |= 1 << index;
-  }
-
-  bool get complete => received == (1 << chunkCount) - 1;
-
-  Uint8List proof() => Uint8List.fromList(buffer);
-}
+String _formatTime(DateTime time) =>
+    '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+String _formatDate(DateTime time) =>
+    '${time.day.toString().padLeft(2, '0')}.${time.month.toString().padLeft(2, '0')}.${time.year} ${_formatTime(time)}';
+String _achievementName(String kind) =>
+    {
+      'people': 'Людей',
+      'encounters': 'Встреч',
+      'friends': 'Друзей',
+      'friend_encounters': 'Встреч с другом',
+      'streak': 'Дней подряд',
+    }[kind] ??
+    kind;
