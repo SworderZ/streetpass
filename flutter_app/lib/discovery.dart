@@ -206,8 +206,7 @@ class DiscoveryService extends ChangeNotifier {
     if (data['rejectedProofs'] is num) {
       rejectedProofs = (data['rejectedProofs'] as num).toInt();
     }
-    final value = data['error'];
-    error = value == null ? null : value.toString();
+    error = data['error']?.toString();
     notifyListeners();
   }
 
