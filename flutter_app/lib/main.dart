@@ -19,6 +19,7 @@ const statisticsUrl = 'https://streetpass.coolify.megaworld.space';
 const releasesUrl = 'https://github.com/SworderZ/streetpass/releases';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   ForegroundController.initialize();
   runApp(const StreetPassApp());
 }

@@ -5,9 +5,9 @@
 папке.
 
 Реализованы BLE-сканирование и реклама, подписанные рукопожатия, никнейм,
-сохранение ID устройства и локальная история встреч. На Linux текущий BLE-
-плагин поддерживает сканирование, но режим рекламы зависит от BlueZ и пока не
-включён по умолчанию.
+сохранение ID устройства и локальная история встреч. На Linux клиент использует
+BlueZ для сканирования и рекламы; на CachyOS перед запуском включите сервис
+`bluetooth`.
 
 Проверки:
 
@@ -16,6 +16,7 @@ flutter pub get
 flutter analyze
 flutter test
 flutter build apk --release
+flutter build apk --release --split-per-abi
 flutter build windows --release
 flutter build linux --release
 ```

@@ -25,7 +25,9 @@ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe). Run
 `streetpass.exe` from the extracted bundle.
 
 GitHub Actions builds Android, Windows and Linux artifacts on every relevant
-push. Version tags (`v*`) publish a Flutter APK to GitHub Releases.
+push. Android is built as separate release APKs by CPU architecture, so a
+normal arm64 phone downloads about 25 MB instead of a large universal debug APK.
+Version tags (`v*`) publish all three Flutter APKs to GitHub Releases.
 
 The public statistics website is in [`website`](website), the backend is in
 [`backend`](backend), and the protocol notes are in [`SPEC.md`](SPEC.md).
